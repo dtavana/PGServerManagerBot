@@ -54,15 +54,6 @@ class DBCommandsCog:
 		
 		channel = self.bot.get_channel(488893718125084687)
 		await channel.send(embed=embed)
-
-	async def otherlog(self, ctx, user, steamid, admin, type):
-		if type == "Registration":
-			embed = discord.Embed(title=f"{type} Log \U00002705", colour=discord.Colour(0xFFA500))
-			embed.set_footer(text="PGServerManager | TwiSt#2791")
-			embed.add_field(name="Data:", value=f"{admin} registered {user.mention} to {steamid}!")
-			channel = self.bot.get_channel(488893718125084687)
-			await channel.send(embed=embed)
-	
 	
 	#--------------Commands--------------
 	@commands.command()

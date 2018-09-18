@@ -77,14 +77,22 @@ class RegistrationCog:
     async def edituser(self, ctx, user: discord.Member):
         try:
             if(await RegistrationCog.check_id(self, user)):
-                await ctx.send("Please enter the new STEAM64ID:")
+                await ctx.send("Please enter the new **STEAM64ID**:")
                 message = discord.Message
 
                 def valididcheck(m):
                     if(m.content[:8] == "76561198"):
                         return True
                 msg = await self.bot.wait_for('message', check=valididcheck)
-                await ctx.send(f"New STEAM64ID: {msg.content}")
+                await self.bot.discur.execute('UPDATE users SET PlayerUID = %s WHERE DiscordUser = %s;', (str(user), msg.content))
+                embed = discord.Embed(
+                    title=f"**Success** \U00002705", colour=discord.Colour(0x32CD32))
+                embed.set_footer(text="PGServerManager | TwiSt#2791")
+                embed.add_field(
+                    name="Data:", value=f"{user.mention} STEAM64ID updated to {msg.content}!")
+                await ctx.send(embed=embed)
+                admin = ctx.message.author
+                await RegistrationCog.otherlog(self, ctx, user, msg.content, admin, "Registration")
             else:
                 await ctx.send(f"The DiscordUser: {user.mention} is not registered.")
         except Exception as e:
