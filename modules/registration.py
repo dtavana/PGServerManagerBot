@@ -5,7 +5,7 @@ import aiomysql
 from discord.ext import commands
 import traceback
 
-#Misc. Modules
+# Misc. Modules
 import datetime
 import config as cfg
 
@@ -31,6 +31,12 @@ class RegistrationCog:
         realsteamid = result[0]
         realsteamid = realsteamid.get('PlayerUID')
         return realsteamid
+
+    async def validsteamidcheck(self, ctx, steamid):
+        if (steamid[:8] == "76561198" and len(steamid == 17)):
+            return True
+        else:
+            return False
 
         # --------------Logging--------------
     async def otherlog(self, ctx, user, steamid, admin, type):
@@ -80,10 +86,19 @@ class RegistrationCog:
                 await ctx.send("Please enter the new **STEAM64ID**:")
                 message = discord.Message
 
-                def valididcheck(m):
-                    if(m.content[:8] == "76561198"):
-                        return True
-                msg = await self.bot.wait_for('message', check=valididcheck)
+                def valididchecklistener(m):
+                    return lambda m: m.author == ctx.author
+
+                msg = await self.bot.wait_for('message', check=valididchecklistener)
+                if(await RegistrationCog.validsteamidcheck(self, ctx, msg.content) != True):
+                    # To check if SteamID is valid
+                    embed = discord.Embed(
+                        title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
+                    embed.set_footer(text="PGServerManager | TwiSt#2791")
+                    embed.add_field(
+                        name="Error:", value=f"Invalid STEAM64ID of: {msg.content}")
+                    await ctx.send(embed=embed)
+                    return
                 await self.bot.discur.execute('UPDATE users SET PlayerUID = %s WHERE DiscordUser = %s;', (msg.content, str(user)))
                 embed = discord.Embed(
                     title=f"**Success** \U00002705", colour=discord.Colour(0x32CD32))

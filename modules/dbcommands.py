@@ -162,15 +162,19 @@ class DBCommandsCog:
             await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
             xpData = await asyncio.gather(dzcur.fetchone())
             if bankData[0] == None and xpData[0] == None:
-                    await ctx.send("An error has occured please contact TwiSt")
-                    return
+                # Check if there is Bank or XP data
+                bankData = 0
+                xpData = 0
+            else:
+                bankData = bankData[0]['BankCoins']
+                xpData = xpData[0]['XP']
             embed = discord.Embed(
                 title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
             embed.set_footer(text="PGServerManager | TwiSt#2791")
             embed.add_field(name=f"BankCoins Data:",
-                            value=f"**BankCoins**: {bankData[0]['BankCoins']}")
+                            value=f"**BankCoins**: {bankData}")
             embed.add_field(name=f"XP Data:",
-                            value=f"**XP**: {xpData[0]['XP']}")
+                            value=f"**XP**: {xpData}")
             embed.add_field(name=f"ID Data:",
                             value=f"**STEAM64ID**: {steamid}")
             await ctx.send(embed=embed)
