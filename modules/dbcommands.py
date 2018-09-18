@@ -47,6 +47,12 @@ class DBCommandsCog:
         realsteamid = realsteamid.get('PlayerUID')
         return realsteamid
 
+    async def validsteamidcheck(self, ctx, steamid):
+        if (steamid[:7] == "7656119" and len(steamid) == 17):
+            return True
+        else:
+            return False
+
     # --------------Logging--------------
     async def amountlog(self, ctx, amount, user, admin, type):
         embed = discord.Embed(
@@ -144,8 +150,8 @@ class DBCommandsCog:
         dzconn.close()
 
     @commands.command()
-    @commands.has_any_role("Owner", "Manager", "Developer", "Head Admin", "Super Admin")
-    async def playerdata(self, ctx, user):
+    @commands.has_any_role("Owner", "Manager", "Developer", "Head Admin", "Super Admin","Admin","Moderator")
+    async def playerdata(self, ctx, user: str):
         '''
         Gets all of a player's data
         '''
@@ -153,8 +159,13 @@ class DBCommandsCog:
         dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
         dzcur = await dzconn.cursor(aiomysql.DictCursor)
 
-        if(user[:8] != "76561198"):
-            newuser = await commands.MemberConverter().convert(ctx, user)
+        if(await DBCommandsCog.validsteamidcheck(self, ctx, user) != True):
+            try:
+                newuser = await commands.MemberConverter().convert(ctx, user)
+            except:
+                await ctx.send(f"Invalid value for user: `{user}` (Must be a **Discord User8* or a Valid **STEAM64ID**)")
+                return
+
             # Checks to see if user is registered
             if await DBCommandsCog.check_id(self, newuser):
                 steamid = await DBCommandsCog.get_steamid(self, newuser)
@@ -183,8 +194,17 @@ class DBCommandsCog:
             else:
                 await ctx.send(f"The DiscordUser: {newuser.mention} is not registered.")
         else:
+            # User was a SteamID
             steamid = user
-            # Get the data
+            if(await DBCommandsCog.validsteamidcheck(self, ctx, steamid) != True):
+                    # To check if SteamID is valid
+                embed = discord.Embed(
+                    title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
+                embed.set_footer(text="PGServerManager | TwiSt#2791")
+                embed.add_field(
+                    name="Error:", value=f"Invalid STEAM64ID of: {msg.steamid}")
+                await ctx.send(embed=embed)
+                return
             await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
             bankData = await asyncio.gather(dzcur.fetchone())
             await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))

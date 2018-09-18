@@ -33,7 +33,7 @@ class RegistrationCog:
         return realsteamid
 
     async def validsteamidcheck(self, ctx, steamid):
-        if (steamid[:8] == "76561198" and len(steamid == 17)):
+        if (steamid[:7] == "7656119" and len(steamid) == 17):
             return True
         else:
             return False
@@ -63,6 +63,15 @@ class RegistrationCog:
                     name="Error:", value=f"The DiscordUser: {user.mention} is already registered to {result}!")
                 await ctx.send(embed=embed)
             else:
+                if(await RegistrationCog.validsteamidcheck(self, ctx, steamid) != True):
+                    # To check if SteamID is valid
+                    embed = discord.Embed(
+                        title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
+                    embed.set_footer(text="PGServerManager | TwiSt#2791")
+                    embed.add_field(
+                        name="Error:", value=f"Invalid STEAM64ID of: {steamid}")
+                    await ctx.send(embed=embed)
+                    return
                 await self.bot.discur.execute('INSERT INTO users (DiscordUser, PlayerUID) VALUES (%s,%s);', (str(user), steamid))
                 if await RegistrationCog.check_id(self, user):
                     embed = discord.Embed(
