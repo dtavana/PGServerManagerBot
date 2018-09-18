@@ -3,11 +3,11 @@ import discord
 import asyncio
 import aiomysql
 from discord.ext import commands
+import traceback
 
 #Misc. Modules
 import datetime
 import config as cfg
-import traceback
 
 class DBCommandsCog:
 	def __init__(self, bot):
@@ -66,37 +66,13 @@ class DBCommandsCog:
 	
 	#--------------Commands--------------
 	@commands.command()
-	@commands.has_any_role("Owner","Developer","Manager","Head Admin","Super Admin") 
-	async def register(self, ctx, user: discord.Member, steamid):
-		try:
-			if(await DBCommandsCog.check_id(self, user)):
-				result = await DBCommandsCog.get_steamid(self, user)
-				embed = discord.Embed(title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
-				embed.set_footer(text="PGServerManager | TwiSt#2791")
-				embed.add_field(name="Error:", value=f"The DiscordUser: {user.mention} is already registered to {result}!")
-				await ctx.send(embed=embed)
-			else:
-				await self.bot.discur.execute('INSERT INTO users (DiscordUser, PlayerUID) VALUES (%s,%s);', (str(user), steamid))
-				if await DBCommandsCog.check_id(self, user):
-					embed = discord.Embed(title=f"**Success** \U00002705", colour=discord.Colour(0x32CD32))
-					embed.set_footer(text="PGServerManager | TwiSt#2791")
-					embed.add_field(name="Data:", value=f"{user.mention} succesfully bound to {steamid}!")
-					await ctx.send(embed = embed)
-					admin = ctx.message.author
-					await DBCommandsCog.otherlog(self, ctx, user, steamid, admin, "Registration")
-				else:
-					await ctx.send("An error has occured!")
-		except Exception as e:
-			await ctx.send(f'```py\n{traceback.format_exc()}\n```')
-    
-	@commands.command()
 	@commands.has_any_role("Owner","Manager","Developer","Head Admin","Super Admin") 
 	async def coins(self, ctx, user: discord.Member, amount: int):
 		'''
 		Changes a player's BankCoins in the Database
 		'''
 		#Open Connection
-		dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema)
+		dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
 		dzcur = await dzconn.cursor(aiomysql.DictCursor)
 		
 		#Checks to see if user is registered
@@ -129,11 +105,12 @@ class DBCommandsCog:
 
 		#Close Connection
 		dzconn.close()
+	
 	@commands.command()
 	@commands.has_any_role("Owner","Manager","Developer","Head Admin","Super Admin") 
 	async def xp(self, ctx, user: discord.Member, amount: int):
 		#Open Connection
-		dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema)
+		dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
 		dzcur = await dzconn.cursor(aiomysql.DictCursor)
 
 		if await DBCommandsCog.check_id(self, user):
@@ -173,7 +150,7 @@ class DBCommandsCog:
 		Gets all of a player's data
 		'''
 		#Open Connection
-		dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema)
+		dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
 		dzcur = await dzconn.cursor(aiomysql.DictCursor)
 
 		#Checks to see if user is registered
@@ -200,7 +177,7 @@ class DBCommandsCog:
 	async def customquery(self, ctx, query:str, db: str):
 		if db == "dz":
 			#Open Connection
-			dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema)
+			dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
 			dzcur = await dzconn.cursor(aiomysql.DictCursor)
 				
 			await dzcur.execute(query)

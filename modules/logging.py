@@ -3,6 +3,7 @@ import discord
 import asyncio
 import aiomysql
 from discord.ext import commands
+import traceback
 
 #Misc. Modules
 import datetime

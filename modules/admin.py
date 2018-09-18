@@ -13,6 +13,7 @@ class AdminCog:
 	def __init__(self, bot):
 		self.bot = bot
 	
+	#--------------Cogs Moderations--------------
 	@commands.command(hidden=True)
 	async def load(self, ctx, *, module):
 		"""Loads a module"""
@@ -43,7 +44,7 @@ class AdminCog:
 			await ctx.send(f'```py\n{traceback.format_exc()}\n```')
 		else:
 			await ctx.send(f'Reloaded module: **{module}**')
-    
+
 
 def setup(bot):
     bot.add_cog(AdminCog(bot))
