@@ -145,7 +145,7 @@ class DBCommandsCog:
 
     @commands.command()
     @commands.has_any_role("Owner", "Manager", "Developer", "Head Admin", "Super Admin")
-    async def playerdata(self, ctx, user: discord.Member):
+    async def playerdata(self, ctx, user):
         '''
         Gets all of a player's data
         '''
@@ -153,9 +153,37 @@ class DBCommandsCog:
         dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
         dzcur = await dzconn.cursor(aiomysql.DictCursor)
 
-        # Checks to see if user is registered
-        if await DBCommandsCog.check_id(self, user):
-            steamid = await DBCommandsCog.get_steamid(self, user)
+        if(user[:8] != "76561198"):
+            newuser = await commands.MemberConverter().convert(ctx, user)
+            # Checks to see if user is registered
+            if await DBCommandsCog.check_id(self, newuser):
+                steamid = await DBCommandsCog.get_steamid(self, newuser)
+                # Get the data
+                await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
+                bankData = await asyncio.gather(dzcur.fetchone())
+                await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
+                xpData = await asyncio.gather(dzcur.fetchone())
+                if bankData[0] == None and xpData[0] == None:
+                    # Check if there is Bank or XP data
+                    bankData = 0
+                    xpData = 0
+                else:
+                    bankData = bankData[0]['BankCoins']
+                    xpData = xpData[0]['XP']
+                embed = discord.Embed(
+                    title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
+                embed.set_footer(text="PGServerManager | TwiSt#2791")
+                embed.add_field(name=f"BankCoins Data:",
+                                value=f"**BankCoins**: {bankData}")
+                embed.add_field(name=f"XP Data:",
+                                value=f"**XP**: {xpData}")
+                embed.add_field(name=f"ID Data:",
+                                value=f"**STEAM64ID**: {steamid}")
+                await ctx.send(embed=embed)
+            else:
+                await ctx.send(f"The DiscordUser: {newuser.mention} is not registered.")
+        else:
+            steamid = user
             # Get the data
             await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
             bankData = await asyncio.gather(dzcur.fetchone())
@@ -168,18 +196,16 @@ class DBCommandsCog:
             else:
                 bankData = bankData[0]['BankCoins']
                 xpData = xpData[0]['XP']
-            embed = discord.Embed(
-                title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
-            embed.set_footer(text="PGServerManager | TwiSt#2791")
-            embed.add_field(name=f"BankCoins Data:",
-                            value=f"**BankCoins**: {bankData}")
-            embed.add_field(name=f"XP Data:",
-                            value=f"**XP**: {xpData}")
-            embed.add_field(name=f"ID Data:",
-                            value=f"**STEAM64ID**: {steamid}")
-            await ctx.send(embed=embed)
-        else:
-            await ctx.send(f"The DiscordUser: {user.mention} is not registered.")
+                embed = discord.Embed(
+                    title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
+                embed.set_footer(text="PGServerManager | TwiSt#2791")
+                embed.add_field(name=f"BankCoins Data:",
+                                value=f"**BankCoins**: {bankData}")
+                embed.add_field(name=f"XP Data:",
+                                value=f"**XP**: {xpData}")
+                embed.add_field(name=f"ID Data:",
+                                value=f"**STEAM64ID**: {steamid}")
+                await ctx.send(embed=embed)
 
         # Close Connection
         dzconn.close()
