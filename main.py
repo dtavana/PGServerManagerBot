@@ -25,8 +25,6 @@ class PGManager(commands.Bot):
             return ['pg ']
         return data['prefix']
 		'''
-
-	#Error Handling
 	
 	
 	def run(self):
@@ -47,16 +45,9 @@ class PGManager(commands.Bot):
 		print(f"Total Cogs: {len(self.cogs)}")
 		await self.change_presence(activity=discord.Activity(type=discord.ActivityType.playing, name=f"PGManager | {len(self.users)} members"))
 		
-		#DZ DB
-		self.dzdb = await aiomysql.create_pool(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema)
-		with (await self.dzdb) as dzconn:
-			self.dzcur = await dzconn.cursor(aiomysql.DictCursor)
-			self.dzcommit = dzconn.commit()
 		#Discord DB
-		self.disdb = await aiomysql.create_pool(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema)
-		with (await self.disdb) as disconn:
-			self.discur = await disconn.cursor(aiomysql.DictCursor)
-			self.discommit = disconn.commit()
+		self.disdb = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema)
+		self.discur = await self.disdb.cursor(aiomysql.DictCursor)
 		
 		#Error logging
 		async def on_command_error(ctx, error):

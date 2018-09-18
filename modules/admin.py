@@ -3,6 +3,7 @@ import discord
 import asyncio
 import aiomysql
 from discord.ext import commands
+import traceback
 
 #Misc. Modules
 import datetime
@@ -13,7 +14,6 @@ class AdminCog:
 		self.bot = bot
 	
 	@commands.command(hidden=True)
-	@commands.is_owner()
 	async def load(self, ctx, *, module):
 		"""Loads a module"""
 		try:
@@ -24,7 +24,6 @@ class AdminCog:
 			await ctx.send(f'Loaded module: **{module}**')
 
 	@commands.command(hidden=True)
-	@commands.is_owner()
 	async def unload(self, ctx, *, module):
 		"""Unloads a module"""
 		try:
@@ -35,7 +34,6 @@ class AdminCog:
 			await ctx.send(f'Unloaded module: **{module}**')
 
 	@commands.command(hidden=True)
-	@commands.is_owner()
 	async def reload(self, ctx, *, module):
 		"""Reloads a module"""
 		try:
