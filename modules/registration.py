@@ -84,7 +84,7 @@ class RegistrationCog:
                     if(m.content[:8] == "76561198"):
                         return True
                 msg = await self.bot.wait_for('message', check=valididcheck)
-                await self.bot.discur.execute('UPDATE users SET PlayerUID = %s WHERE DiscordUser = %s;', (str(user), msg.content))
+                await self.bot.discur.execute('UPDATE users SET PlayerUID = %s WHERE DiscordUser = %s;', (msg.content, str(user)))
                 embed = discord.Embed(
                     title=f"**Success** \U00002705", colour=discord.Colour(0x32CD32))
                 embed.set_footer(text="PGServerManager | TwiSt#2791")
