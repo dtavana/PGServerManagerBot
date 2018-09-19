@@ -12,7 +12,8 @@ import config as cfg
 extensions = ['modules.logging',
               'modules.dbcommands',
 			  'modules.admin',
-			  'modules.registration']
+			  'modules.registration',
+			  'modules.info']
 
 class PGManager(commands.Bot):
 	def __init__(self):
