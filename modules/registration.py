@@ -45,24 +45,37 @@ class RegistrationCog:
                 title=f"{type} Log \U00002705", colour=discord.Colour(0xFFA500))
             embed.set_footer(text="PGServerManager | TwiSt#2791")
             embed.add_field(
-                name="Data:", value=f"{admin} registered {user.mention} to {steamid}!")
+                name="Data:", value=f"{admin} registered {user.mention} to {steamid}")
             channel = self.bot.get_channel(488893718125084687)
             await channel.send(embed=embed)
 
     # --------------Registration--------------
     @commands.command()
     @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin")
-    async def adduser(self, ctx, user: discord.Member, steamid):
+    async def adduser(self, ctx, player: discord.Member):
         try:
-            if(await RegistrationCog.check_id(self, user)):
+            if(await RegistrationCog.check_id(self, player)):
                 result = await RegistrationCog.get_steamid(self, user)
                 embed = discord.Embed(
                     title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
                 embed.set_footer(text="PGServerManager | TwiSt#2791")
                 embed.add_field(
-                    name="Error:", value=f"The DiscordUser: {user.mention} is already registered to {result}!")
+                    name="Error:", value=f"The DiscordUser: {player.mention} is already registered to {result}!")
                 await ctx.send(embed=embed)
             else:
+                await ctx.send("Please enter the new **STEAM64ID**:")
+
+                msg = await self.bot.wait_for('message', check=lambda m: m.author == ctx.author)
+                if(await RegistrationCog.validsteamidcheck(self, ctx, msg.content) != True):
+                    # To check if SteamID is valid
+                    embed = discord.Embed(
+                        title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
+                    embed.set_footer(text="PGServerManager | TwiSt#2791")
+                    embed.add_field(
+                        name="Error:", value=f"Invalid STEAM64ID of: {msg.content}")
+                    await ctx.send(embed=embed)
+                    return
+                steamid = msg.content
                 if(await RegistrationCog.validsteamidcheck(self, ctx, steamid) != True):
                     # To check if SteamID is valid
                     embed = discord.Embed(
@@ -72,13 +85,13 @@ class RegistrationCog:
                         name="Error:", value=f"Invalid STEAM64ID of: {steamid}")
                     await ctx.send(embed=embed)
                     return
-                await self.bot.discur.execute('INSERT INTO users (DiscordUser, PlayerUID) VALUES (%s,%s);', (str(user), steamid))
-                if await RegistrationCog.check_id(self, user):
+                await self.bot.discur.execute('INSERT INTO users (DiscordUser, PlayerUID) VALUES (%s,%s);', (str(player), steamid))
+                if await RegistrationCog.check_id(self, player):
                     embed = discord.Embed(
                         title=f"**Success** \U00002705", colour=discord.Colour(0x32CD32))
                     embed.set_footer(text="PGServerManager | TwiSt#2791")
                     embed.add_field(
-                        name="Data:", value=f"{user.mention} succesfully bound to {steamid}!")
+                        name="Data:", value=f"{player.mention} succesfully bound to {steamid}")
                     await ctx.send(embed=embed)
                     admin = ctx.message.author
                     await RegistrationCog.otherlog(self, ctx, user, steamid, admin, "Registration")
@@ -89,26 +102,23 @@ class RegistrationCog:
 
     @commands.command()
     @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin")
-    async def edituser(self, ctx, user: discord.Member):
+    async def edituser(self, ctx, player: discord.Member):
         try:
-            if(await RegistrationCog.check_id(self, user)):
+            if(await RegistrationCog.check_id(self, player)):
                 await ctx.send("Please enter the new **STEAM64ID**:")
-                message = discord.Message
 
-                def valididchecklistener(m):
-                    return lambda m: m.author == ctx.author
-
-                msg = await self.bot.wait_for('message', check=valididchecklistener)
-                if(await RegistrationCog.validsteamidcheck(self, ctx, msg.content) != True):
+                msg = await self.bot.wait_for('message', check=lambda m: m.author == ctx.author)
+                steamid = msg.content
+                if(await RegistrationCog.validsteamidcheck(self, ctx, steamid) != True):
                     # To check if SteamID is valid
                     embed = discord.Embed(
                         title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
                     embed.set_footer(text="PGServerManager | TwiSt#2791")
                     embed.add_field(
-                        name="Error:", value=f"Invalid STEAM64ID of: {msg.content}")
+                        name="Error:", value=f"Invalid STEAM64ID of: {steamid}")
                     await ctx.send(embed=embed)
                     return
-                
+
                 message = await ctx.send("Are you sure you would like to do this?")
                 await message.add_reaction("\U0001f44d")
                 await message.add_reaction("\U0001f44e")
@@ -117,20 +127,20 @@ class RegistrationCog:
                     validreactions = ["\U0001f44d", "\U0001f44e"]
                     return user.id == ctx.author.id and reaction.emoji in validreactions
                 reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck)
-                #Check if thumbs up
+                # Check if thumbs up
                 if reaction.emoji != "\U0001f44d":
                     return
-                await self.bot.discur.execute('UPDATE users SET PlayerUID = %s WHERE DiscordUser = %s;', (msg.content, str(user)))
+                await self.bot.discur.execute('UPDATE users SET PlayerUID = %s WHERE DiscordUser = %s;', (steamid, str(player)))
                 embed = discord.Embed(
                     title=f"**Success** \U00002705", colour=discord.Colour(0x32CD32))
                 embed.set_footer(text="PGServerManager | TwiSt#2791")
                 embed.add_field(
-                    name="Data:", value=f"{user.mention} STEAM64ID updated to {msg.content}!")
+                    name="Data:", value=f"{player.mention} STEAM64ID updated to {steamid}")
                 await ctx.send(embed=embed)
                 admin = ctx.message.author
-                await RegistrationCog.otherlog(self, ctx, user, msg.content, admin, "Registration")
+                await RegistrationCog.otherlog(self, ctx, player, steamid, admin, "Registration")
             else:
-                await ctx.send(f"The DiscordUser: {user.mention} is not registered.")
+                await ctx.send(f"The DiscordUser: {player.mention} is not registered.")
         except Exception as e:
             await ctx.send(f'```py\n{traceback.format_exc()}\n```')
 

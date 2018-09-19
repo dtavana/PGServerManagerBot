@@ -31,7 +31,7 @@ class PGManager(commands.Bot):
 	
 	
 	def run(self):
-		self.remove_command("help")
+		#self.remove_command("help")
 		for ext in extensions:
 			try:
 				self.load_extension(ext)
