@@ -5,7 +5,7 @@ import aiomysql
 from discord.ext import commands
 import traceback
 
-#Misc. Modules
+# Misc. Modules
 import datetime
 import config as cfg
 
@@ -17,13 +17,15 @@ class DBCommandsCog:
     # Error handling
     '''
 	async def on_command_error(self, ctx, error):
-        
+
 		# This prevents any commands with local handlers being handled here in on_command_error.
 		if hasattr(ctx.command, 'on_error'):
 			return
-		embed = discord.Embed(title=f"**EXCEPTION** \U0000274c", colour=discord.Colour(0xf44b42))
+		embed = discord.Embed(title=f"**EXCEPTION** \U0000274c",
+		                      colour=discord.Colour(0xf44b42))
 		embed.set_footer(text="PGServerManager | TwiSt#2791")
-		embed.add_field(name="There was the following exception!", value=f"```{error}```")
+		embed.add_field(name="There was the following exception!",
+		                value=f"```{error}```")
 		await ctx.send(embed=embed)
 		channel = self.bot.get_channel(491104127573557268)
 		await channel.send(embed=embed)
@@ -78,6 +80,25 @@ class DBCommandsCog:
         # Checks to see if user is registered
         if await DBCommandsCog.check_id(self, user):
             steamid = await DBCommandsCog.get_steamid(self, user)
+            
+            embed = discord.Embed(
+                title=f"ReactToConfirm \U0001f4b1", colour=discord.Colour(0xFFA500))
+            embed.set_footer(text="PGServerManager | TwiSt#2791")
+            embed.add_field(name="Type:", value=f"`Coins`")
+            embed.add_field(name="Amount:", value=f"`{amount}`")
+            embed.add_field(name="STEAM64ID:", value=f"`{amount}`")
+            message = await ctx.send(embed=embed)
+            await message.add_reaction("\U0001f44d")
+            await message.add_reaction("\U0001f44e")
+
+            def reactioncheck(reaction, user):
+                validreactions = ["\U0001f44d", "\U0001f44e"]
+                return user.id == ctx.author.id and reaction.emoji in validreactions
+            reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck)
+            # Check if thumbs up
+            if reaction.emoji != "\U0001f44d":
+                return
+
             # Get starting value
             await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
             original = await asyncio.gather(dzcur.fetchone())
@@ -118,6 +139,25 @@ class DBCommandsCog:
 
         if await DBCommandsCog.check_id(self, user):
             steamid = await DBCommandsCog.get_steamid(self, user)
+            
+            embed = discord.Embed(
+                title=f"ReactToConfirm \U0001f4b1", colour=discord.Colour(0xFFA500))
+            embed.set_footer(text="PGServerManager | TwiSt#2791")
+            embed.add_field(name="Type:", value=f"`XP`")
+            embed.add_field(name="Amount:", value=f"`{amount}`")
+            embed.add_field(name="STEAM64ID:", value=f"`{amount}`")
+            message = await ctx.send(embed=embed)
+            await message.add_reaction("\U0001f44d")
+            await message.add_reaction("\U0001f44e")
+
+            def reactioncheck(reaction, user):
+                validreactions = ["\U0001f44d", "\U0001f44e"]
+                return user.id == ctx.author.id and reaction.emoji in validreactions
+            reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck)
+            # Check if thumbs up
+            if reaction.emoji != "\U0001f44d":
+                return
+            
             # Get starting value
             await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
             original = await asyncio.gather(dzcur.fetchone())
@@ -150,7 +190,7 @@ class DBCommandsCog:
         dzconn.close()
 
     @commands.command()
-    @commands.has_any_role("Owner", "Manager", "Developer", "Head Admin", "Super Admin","Admin","Moderator")
+    @commands.has_any_role("Owner", "Manager", "Developer", "Head Admin", "Super Admin", "Admin", "Moderator")
     async def playerdata(self, ctx, user: str):
         '''
         Gets all of a player's data
@@ -238,6 +278,23 @@ class DBCommandsCog:
             dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
             dzcur = await dzconn.cursor(aiomysql.DictCursor)
 
+            await ctx.send("Are you sure you would like to perform the following? If yes, react with a Thumbs Up. Otherwise, reacting with a Thumbs Down")
+            embed = discord.Embed(
+                title=f"CustomQueryInfo \U0000270d", colour=discord.Colour(0xFFA500))
+            embed.set_footer(text="PGServerManager | TwiSt#2791")
+            embed.add_field(name="Query:", value=f"`{query}`")
+            embed.add_field(name="Database:", value=f"`DayZ DB`")
+            message = await ctx.send(embed=embed)
+            await message.add_reaction("\U0001f44d")
+            await message.add_reaction("\U0001f44e")
+
+            def reactioncheck(reaction, user):
+                validreactions = ["\U0001f44d", "\U0001f44e"]
+                return user.id == ctx.author.id and reaction.emoji in validreactions
+            reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck)
+            # Check if thumbs up
+            if reaction.emoji != "\U0001f44d":
+                return
             await dzcur.execute(query)
             await dzconn.commit()
             result = await asyncio.gather(dzcur.fetchall())
@@ -252,6 +309,23 @@ class DBCommandsCog:
             dzconn.close()
 
         elif db == "dis":
+            await ctx.send("Are you sure you would like to perform the following? If yes, react with a Thumbs Up. Otherwise, reacting with a Thumbs Down")
+            embed = discord.Embed(
+                title=f"CustomQueryInfo \U0000270d", colour=discord.Colour(0xFFA500))
+            embed.set_footer(text="PGServerManager | TwiSt#2791")
+            embed.add_field(name="Query:", value=f"`{query}`")
+            embed.add_field(name="Database:", value=f"`DayZ DB`")
+            message = await ctx.send(embed=embed)
+            await message.add_reaction("\U0001f44d")
+            await message.add_reaction("\U0001f44e")
+
+            def reactioncheck(reaction, user):
+                validreactions = ["\U0001f44d", "\U0001f44e"]
+                return user.id == ctx.author.id and reaction.emoji in validreactions
+            reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck)
+            # Check if thumbs up
+            if reaction.emoji != "\U0001f44d":
+                return
             await self.bot.discur.execute(query)
             await self.bot.discommit
             result = await asyncio.gather(self.discur.fetchall())

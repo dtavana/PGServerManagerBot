@@ -108,6 +108,18 @@ class RegistrationCog:
                         name="Error:", value=f"Invalid STEAM64ID of: {msg.content}")
                     await ctx.send(embed=embed)
                     return
+                
+                message = await ctx.send("Are you sure you would like to do this?")
+                await message.add_reaction("\U0001f44d")
+                await message.add_reaction("\U0001f44e")
+
+                def reactioncheck(reaction, user):
+                    validreactions = ["\U0001f44d", "\U0001f44e"]
+                    return user.id == ctx.author.id and reaction.emoji in validreactions
+                reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck)
+                #Check if thumbs up
+                if reaction.emoji != "\U0001f44d":
+                    return
                 await self.bot.discur.execute('UPDATE users SET PlayerUID = %s WHERE DiscordUser = %s;', (msg.content, str(user)))
                 embed = discord.Embed(
                     title=f"**Success** \U00002705", colour=discord.Colour(0x32CD32))
