@@ -48,10 +48,6 @@ class PGManager(commands.Bot):
 		print(f"Total Cogs: {len(self.cogs)}")
 		await self.change_presence(activity=discord.Activity(type=discord.ActivityType.playing, name=f"PGManager | {len(self.users)} members"))
 		
-		#Discord DB
-		self.disdb = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
-		self.discur = await self.disdb.cursor(aiomysql.DictCursor)
-		
 		#Error logging
 		async def on_command_error(ctx, error):
 			embed = discord.Embed(title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))

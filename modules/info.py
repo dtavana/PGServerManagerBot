@@ -1,4 +1,4 @@
-#Base Modules for Bot
+# Base Modules for Bot
 import discord
 import asyncio
 import aiomysql
@@ -9,6 +9,7 @@ import traceback
 import datetime
 import config as cfg
 import psutil
+
 
 class InfoCog:
     def __init__(self, bot):
@@ -44,6 +45,7 @@ class InfoCog:
         e.add_field(name="PC Stats", value=f"**Memory:** {int(p.memory_info()[0]/1024/1024)}mb ({memory_percent}%)\n"
                     f"**CPU:** {psutil.cpu_percent()}%", inline=False)
         await ctx.send(embed=e)
-    
+
+
 def setup(bot):
     bot.add_cog(InfoCog(bot))
