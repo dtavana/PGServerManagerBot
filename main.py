@@ -13,7 +13,8 @@ extensions = ['modules.logging',
               'modules.dbcommands',
 			  'modules.admin',
 			  'modules.registration',
-			  'modules.info']
+			  'modules.info',
+			  'modules.gambling']
 
 class PGManager(commands.Bot):
 	def __init__(self):
