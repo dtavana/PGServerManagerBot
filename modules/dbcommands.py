@@ -248,7 +248,7 @@ class DBCommandsCog:
 
         if await DBCommandsCog.check_id(self, player):
             steamid = await DBCommandsCog.get_steamid(self, player)
-            curPlayers = DBCommandsCog.currentplayers(self, ctx)
+            curPlayers = await DBCommandsCog.currentplayers(self, ctx)
             if (steamid not in curPlayers):
                 embed = discord.Embed(
                     title=f"ReactToConfirm \U0001f4b1", colour=discord.Colour(0xFFA500))
