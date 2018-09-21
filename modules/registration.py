@@ -74,7 +74,7 @@ class RegistrationCog:
     async def adduser(self, ctx, player: discord.Member):
         try:
             if(await RegistrationCog.check_id(self, player)):
-                result = await RegistrationCog.get_steamid(self, user)
+                result = await RegistrationCog.get_steamid(self, player)
                 embed = discord.Embed(
                     title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
                 embed.set_footer(text="PGServerManager | TwiSt#2791")
