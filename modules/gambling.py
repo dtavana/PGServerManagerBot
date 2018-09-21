@@ -128,7 +128,7 @@ class GamblingCog:
 
         winnerUser = winner[0]['DiscordUser']
         #member = discord.utils.find(lambda m: m.name == winnerUser, channel.guild.members)
-        await ctx.send(f"{winnerUser} won {total} coins. Ticket# {winningTicket}")
+        await ctx.send(f"{winnerUser} won {total} coins. Ticket#{winningTicket}")
         await ctx.send(f"Use `pg claim` to claim your rewards!")
         await discur.execute('UPDATE users SET Balance = Balance + %s WHERE DiscordUser = %s;', (total, winnerUser))
         await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (winnerUser))
@@ -138,7 +138,7 @@ class GamblingCog:
         await discur.execute('DELETE FROM jackpot')
         self.openpot = True
         disconn.close()
-
+    
     @commands.command()
     async def claim(self, ctx):
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)

@@ -467,6 +467,40 @@ class DBCommandsCog:
             # Close Connection
             disconn.close()
 
+    @commands.command()
+    async def mydata(self, ctx):
+        disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
+        discur = await disconn.cursor(aiomysql.DictCursor)
+        dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
+        dzcur = await dzconn.cursor(aiomysql.DictCursor)
+
+        # Checks to see if user is registered
+        if await DBCommandsCog.check_id(self, ctx.author):
+            steamid = await DBCommandsCog.get_steamid(self, ctx.author)
+            # Get the data
+            await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
+            bankData = await asyncio.gather(dzcur.fetchone())
+            await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
+            xpData = await asyncio.gather(dzcur.fetchone())
+            await dzcur.execute('SELECT Humanity FROM character_data WHERE PlayerUID = %s;', (steamid,))
+            humData = await asyncio.gather(dzcur.fetchone())
+            await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
+            balData = await asyncio.gather(discur.fetchone())
+            bankData = bankData[0]['BankCoins']
+            xpData = xpData[0]['XP']
+            humData = humData[0]['Humanity']
+            balData = balData[0]['Balance']
+
+            embed = discord.Embed(
+                title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
+            embed.set_footer(text="PGServerManager | TwiSt#2791")
+            embed.add_field(name=f"Player Data:", value=f"**BankCoins**: {bankData}\n"
+                                                        f"**XP**: {xpData}\n"
+                                                        f"**Humanity**: {humData}\n"
+                                                        f"**Balance**: {balData}\n"
+                                                        f"**STEAM64ID**: {steamid}", inline=False)
+            await ctx.author.send(embed=embed)
+
 
 def setup(bot):
     bot.add_cog(DBCommandsCog(bot))
