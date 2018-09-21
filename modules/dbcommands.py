@@ -315,6 +315,8 @@ class DBCommandsCog:
         # Open Connection
         dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
         dzcur = await dzconn.cursor(aiomysql.DictCursor)
+        disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
+        discur = await disconn.cursor(aiomysql.DictCursor)
 
         if(await DBCommandsCog.validsteamidcheck(self, ctx, player) != True):
             try:
@@ -333,8 +335,8 @@ class DBCommandsCog:
                 xpData = await asyncio.gather(dzcur.fetchone())
                 await dzcur.execute('SELECT Humanity FROM character_data WHERE PlayerUID = %s;', (steamid,))
                 humData = await asyncio.gather(dzcur.fetchone())
+                
                 if bankData[0] == None and xpData[0] == None and humData[0] == None:
-                    # Check if there is Bank or XP data
                     bankData = 0
                     xpData = 0
                     humData = 0
@@ -371,7 +373,7 @@ class DBCommandsCog:
             xpData = await asyncio.gather(dzcur.fetchone())
             await dzcur.execute('SELECT Humanity FROM character_data WHERE PlayerUID = %s;', (steamid,))
             humData = await asyncio.gather(dzcur.fetchone())
-            if bankData[0] == None and xpData[0] == None and humData[0] == 0:
+            if bankData[0] == None and xpData[0] == None and humData[0] == None:
                 # Check if there is Bank or XP data
                 bankData = 0
                 xpData = 0

@@ -118,6 +118,7 @@ class RegistrationCog:
                 disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
                 discur = await disconn.cursor(aiomysql.DictCursor)
                 await discur.execute('INSERT INTO users (DiscordUser, PlayerUID) VALUES (%s,%s);', (str(player), steamid))
+                disconn.close()
                 if await RegistrationCog.check_id(self, player):
                     embed = discord.Embed(
                         title=f"**Success** \U00002705", colour=discord.Colour(0x32CD32))
@@ -131,8 +132,7 @@ class RegistrationCog:
                     await ctx.send("An error has occured!")
         except Exception as e:
             await ctx.send(f'```py\n{traceback.format_exc()}\n```')
-        # Close Connection
-        disconn.close()
+        
 
     @commands.command()
     @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin")
