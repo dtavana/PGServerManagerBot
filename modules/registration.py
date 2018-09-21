@@ -99,7 +99,7 @@ class RegistrationCog:
                 embed = discord.Embed(
                     title=f"ReactToConfirm \U0001f4b1", colour=discord.Colour(0xFFA500))
                 embed.set_footer(text="PGServerManager | TwiSt#2791")
-                embed.add_field(name="**User:**", value=f"`{player.mention}`")
+                embed.add_field(name="**User:**", value=f"{player.mention}")
                 embed.add_field(name="**New STEAM64ID:**",
                                 value=f"`{steamid}`")
                 message = await ctx.send(embed=embed)

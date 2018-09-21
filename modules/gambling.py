@@ -127,20 +127,20 @@ class GamblingCog:
             winner = await asyncio.gather(discur.fetchone())
 
         winnerUser = winner[0]['DiscordUser']
-        #member = discord.utils.find(lambda m: m.name == winnerUser, channel.guild.members)
-        await ctx.send(f"{winnerUser} won {total} coins. Ticket#{winningTicket}")
-        await ctx.send(f"Use `pg claim` to claim your rewards!")
+        winnerMember = discord.utils.find(lambda m: str(m) == winnerUser, ctx.guild.members)
+        await ctx.send(f"{winnerMember.mention} won {total} coins. Ticket#{winningTicket}")
+        await ctx.send(f"Use `pg claim ENTERAMOUNT` to claim your rewards!")
         await discur.execute('UPDATE users SET Balance = Balance + %s WHERE DiscordUser = %s;', (total, winnerUser))
         await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (winnerUser))
         curBal = await asyncio.gather(discur.fetchone())
         curBal = curBal[0]['Balance']
-        await ctx.send(f"{winnerUser}'s new balance is {curBal}")
+        await ctx.send(f"{winnerMember.mention}'s new balance is {curBal}")
         await discur.execute('DELETE FROM jackpot')
         self.openpot = True
         disconn.close()
     
     @commands.command()
-    async def claim(self, ctx):
+    async def claim(self, ctx, amount: int):
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
         dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
@@ -154,12 +154,26 @@ class GamblingCog:
                 curBal = await asyncio.gather(discur.fetchone())
                 curBal = curBal[0]['Balance']
 
+                if (amount > curBal):
+                    await ctx.send(f"{ctx.author.mention} can not withdraw {amount} coins as it is over their current balance of {curBal}")
+                    dzconn.close()
+                    disconn.close()
+                    return
+                
                 # Get starting value
                 await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
                 original = await asyncio.gather(dzcur.fetchone())
+                origCoins = original[0]['BankCoins']
+
+                if (origCoins + amount > 20000000):
+                    await ctx.send(f"{ctx.author.mention} can not claim {amount} coins as it will put their bank over 20,000,000")
+                    await ctx.send(f"{ctx.author.mention} current BankCoins is {origCoins}")
+                    dzconn.close()
+                    disconn.close()
+                    return
 
                 # Perform the query
-                await dzcur.execute('UPDATE player_data SET BankCoins = BankCoins + %s WHERE PlayerUID = %s;', (curBal, steamid))
+                await dzcur.execute('UPDATE player_data SET BankCoins = BankCoins + %s WHERE PlayerUID = %s;', (amount, steamid))
 
                 # Check if it actually changed
                 await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
@@ -169,18 +183,19 @@ class GamblingCog:
                     await ctx.send("An error has occured and you have not lost any coins")
                 else:
                     # Perform the query
-                    await discur.execute('UPDATE users SET Balance = 0 WHERE DiscordUser = %s;', (str(ctx.author),))
+                    await discur.execute('UPDATE users SET Balance = Balance - %s WHERE DiscordUser = %s;', (amount, str(ctx.author),))
                     await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
                     newBal = await asyncio.gather(discur.fetchone())
                     newBal = newBal[0]['Balance']
                     if (newBal == curBal):
-                        await ctx.send("")
+                        await ctx.send("An error has occured")
                     else:
                         embed = discord.Embed(
                             title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
                         embed.set_footer(text="PGServerManager | TwiSt#2791")
                         embed.add_field(
-                            name="Data:", value=f"{ctx.author.mention} has withdrawn his balance of **{curBal} Coins**!")
+                            name="Data:", value=f"{ctx.author.mention} has withdrawn **{amount} Coins** from balance!\n"
+                                                f"{ctx.author.mention}'s new balance is {newBal}", inline=False)
                         await ctx.send(embed=embed)
                         await GamblingCog.gamblelog(self, ctx, newBal, "Withdraw")
             else:
@@ -199,6 +214,16 @@ class GamblingCog:
 
     @commands.command(aliases=['bet'])
     async def jackpot(self, ctx, amount: int):
+        jackpotchanid = 492488744440561674
+        channel = self.bot.get_channel(jackpotchanid)
+        if (ctx.channel != channel):
+            await ctx.send(f"Please run this in <#{jackpotchanid}>")
+            return
+        
+        if amount < 1:
+            await ctx.send(f"{ctx.author.mention} used an invalid amount of {amount}")
+            return
+        
         dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
         dzcur = await dzconn.cursor(aiomysql.DictCursor)
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
@@ -219,9 +244,13 @@ class GamblingCog:
                     curPot = await asyncio.gather(discur.fetchall())
                     if self.openpot == False:
                         await ctx.send("The pot currently is not open try again in a minute!")
+                        dzconn.close()
+                        disconn.close()
                         return
                     if(len(curPot[0]) == 1 and (curPot[0][0]['DiscordUser'] == str(ctx.author))):
                         await ctx.send("Wait until another user goes in before going in again")
+                        dzconn.close()
+                        disconn.close()
                         return
                     await discur.execute('INSERT INTO jackpot (DiscordUser, Amount) VALUES (%s,%s);', (str(ctx.author), amount))
                     # Remove coins
@@ -320,6 +349,8 @@ class GamblingCog:
             dzconn.close()
             disconn.close()
             return
+        dzconn.close()
+        disconn.close()
 
 
 def setup(bot):

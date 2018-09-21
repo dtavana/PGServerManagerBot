@@ -126,6 +126,7 @@ class DBCommandsCog:
                 # Check if thumbs up
                 if reaction.emoji != "\U0001f44d":
                     await ctx.send("Command cancelled")
+                    dzconn.close()
                     return
 
                 # Get starting value
@@ -160,6 +161,7 @@ class DBCommandsCog:
                 embed.add_field(
                     name="Error:", value=f"The STEAM64ID bound to {player.mention} ({steamid}) is currently in game")
                 await ctx.send(embed=embed)
+                dzconn.close()
                 return
         else:
             await ctx.send(f"The DiscordUser: {player.mention} is not registered.")
@@ -196,6 +198,7 @@ class DBCommandsCog:
                 # Check if thumbs up
                 if reaction.emoji != "\U0001f44d":
                     await ctx.send("Command cancelled")
+                    dzconn.close()
                     return
 
                 # Get starting value
@@ -230,6 +233,7 @@ class DBCommandsCog:
                 embed.add_field(
                     name="Error:", value=f"The STEAM64ID bound to {player.mention} ({steamid}) is currently in game")
                 await ctx.send(embed=embed)
+                dzconn.close()
                 return
         else:
             await ctx.send(f"The DiscordUser: {user.mention} is not registered. Please create a ticket with your SteamID in the subject!")
@@ -265,6 +269,7 @@ class DBCommandsCog:
                 # Check if thumbs up
                 if reaction.emoji != "\U0001f44d":
                     await ctx.send("Command cancelled")
+                    dzconn.close()
                     return
 
                 # Get starting value
@@ -299,6 +304,7 @@ class DBCommandsCog:
                 embed.add_field(
                     name="Error:", value=f"The STEAM64ID bound to {player.mention} ({steamid}) is currently in game")
                 await ctx.send(embed=embed)
+                dzconn.close()
                 return
         else:
             await ctx.send(f"The DiscordUser: {user.mention} is not registered. Please create a ticket with your SteamID in the subject!")
@@ -323,6 +329,8 @@ class DBCommandsCog:
                 newuser = await commands.MemberConverter().convert(ctx, player)
             except:
                 await ctx.send(f"Invalid value for user: `{player}` (Must be a **Discord User* or a Valid **STEAM64ID**)")
+                dzconn.close()
+                disconn.close()
                 return
 
             # Checks to see if user is registered
@@ -335,7 +343,7 @@ class DBCommandsCog:
                 xpData = await asyncio.gather(dzcur.fetchone())
                 await dzcur.execute('SELECT Humanity FROM character_data WHERE PlayerUID = %s;', (steamid,))
                 humData = await asyncio.gather(dzcur.fetchone())
-                
+
                 if bankData[0] == None and xpData[0] == None and humData[0] == None:
                     bankData = 0
                     xpData = 0
@@ -366,6 +374,8 @@ class DBCommandsCog:
                 embed.add_field(
                     name="Error:", value=f"Invalid STEAM64ID of: {msg.steamid}")
                 await ctx.send(embed=embed)
+                dzconn.close()
+                disconn.close()
                 return
             await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
             bankData = await asyncio.gather(dzcur.fetchone())
@@ -420,6 +430,8 @@ class DBCommandsCog:
             # Check if thumbs up
             if reaction.emoji != "\U0001f44d":
                 await ctx.send("Command Cancelled")
+                dzconn.close()
+                disconn.close()
                 return
             await dzcur.execute(query)
             await dzconn.commit()
@@ -452,6 +464,8 @@ class DBCommandsCog:
             # Check if thumbs up
             if reaction.emoji != "\U0001f44d":
                 await ctx.send("Command Cancelled")
+                dzconn.close()
+                disconn.close()
                 return
             # Open Connection
             disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
@@ -500,6 +514,8 @@ class DBCommandsCog:
                                                         f"**Balance**: {balData}\n"
                                                         f"**STEAM64ID**: {steamid}", inline=False)
             await ctx.author.send(embed=embed)
+            dzconn.close()
+            disconn.close()
 
 
 def setup(bot):
