@@ -17,7 +17,7 @@ class AdminCog:
 
     # --------------Cogs Moderations--------------
     @commands.command(hidden=True)
-    @commands.has_any_role("Owner", "Manager", "Developer", "Head Admin", "Super Admin", "Admin", "Moderator")
+    @commands.has_any_role("Owner","Developer")
     async def load(self, ctx, *, module):
         """Loads a module"""
         try:
@@ -28,7 +28,7 @@ class AdminCog:
             await ctx.send(f'Loaded module: **{module}**')
 
     @commands.command(hidden=True)
-    @commands.has_any_role("Owner", "Manager", "Developer", "Head Admin", "Super Admin", "Admin", "Moderator")
+    @commands.has_any_role("Owner", "Developer")
     async def unload(self, ctx, *, module):
         """Unloads a module"""
         try:
@@ -39,7 +39,7 @@ class AdminCog:
             await ctx.send(f'Unloaded module: **{module}**')
 
     @commands.command(hidden=True)
-    @commands.has_any_role("Owner", "Manager", "Developer", "Head Admin", "Super Admin", "Admin", "Moderator")
+    @commands.has_any_role("Owner","Developer")
     async def reload(self, ctx, *, module):
         """Reloads a module"""
         try:

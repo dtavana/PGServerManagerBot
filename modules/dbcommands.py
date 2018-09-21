@@ -83,12 +83,12 @@ class DBCommandsCog:
         return players
 
     # --------------Logging--------------
-    async def amountlog(self, ctx, amount, user, admin, type):
+    async def amountlog(self, ctx, amount, user, type):
         embed = discord.Embed(
             title=f"{type} Log \U00002705", colour=discord.Colour(0xFFA500))
         embed.set_footer(text="PGServerManager | TwiSt#2791")
         embed.add_field(
-            name="Data:", value=f"<@{ctx.author.id}> gave {user.mention} {amount} {type}!")
+            name="Data:", value=f"{ctx.author.mention} gave {user.mention} {amount} {type}!")
 
         channel = self.bot.get_channel(488893718125084687)
         await channel.send(embed=embed)
@@ -151,8 +151,7 @@ class DBCommandsCog:
                     embed.add_field(
                         name="New:", value=f"{player.mention} now has **{new[0]['BankCoins']} Coins in Bank**!")
                     await ctx.send(embed=embed)
-                    admin = ctx.message.author
-                    await DBCommandsCog.amountlog(self, ctx, amount, player, admin, "Coins to Bank")
+                    await DBCommandsCog.amountlog(self, ctx, amount, player, "Coins to Bank")
             else:
                 # User was in game
                 embed = discord.Embed(
@@ -222,8 +221,7 @@ class DBCommandsCog:
                     embed.add_field(
                         name="New:", value=f"{player.mention} now has **{new[0]['XP']} XP**!")
                     await ctx.send(embed=embed)
-                    admin = ctx.message.author
-                    await DBCommandsCog.amountlog(self, ctx, amount, player, admin, "XP")
+                    await DBCommandsCog.amountlog(self, ctx, amount, player, "XP")
             else:
                 # User was in game
                 embed = discord.Embed(
@@ -292,8 +290,7 @@ class DBCommandsCog:
                     embed.add_field(
                         name="New:", value=f"{player.mention} now has **{new[0]['Humanity']} Humanity**!")
                     await ctx.send(embed=embed)
-                    admin = ctx.message.author
-                    await DBCommandsCog.amountlog(self, ctx, amount, player, admin, "Humanity")
+                    await DBCommandsCog.amountlog(self, ctx, amount, player, "Humanity")
             else:
                 # User was in game
                 embed = discord.Embed(
