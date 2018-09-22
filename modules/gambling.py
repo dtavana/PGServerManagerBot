@@ -140,7 +140,89 @@ class GamblingCog:
         disconn.close()
     
     @commands.command()
-    async def claim(self, ctx, amount: int):
+    async def deposit(self, ctx, amount: int):
+        disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
+        discur = await disconn.cursor(aiomysql.DictCursor)
+        dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
+        dzcur = await dzconn.cursor(aiomysql.DictCursor)
+       
+        if await GamblingCog.check_id(self, ctx.author):
+            steamid = await GamblingCog.get_steamid(self, ctx.author)
+            #Get the users current balance
+            await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
+            curBal = await asyncio.gather(discur.fetchone())
+            curBal = curBal[0]['Balance']
+            #Get users current BankCoins
+            await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
+            original = await asyncio.gather(dzcur.fetchone())
+            origCoins = original[0]['BankCoins']
+
+            if (amount > origCoins):
+                #Check if they have enough
+                await ctx.send(f"{ctx.author.mention} does not have enough coins in their bank to add {amount} to their balance")
+                dzconn.close()
+                disconn.close()
+                return
+            
+            curPlayers = await GamblingCog.currentplayers(self, ctx)
+            if (steamid not in curPlayers):
+                # Update the balance
+                await discur.execute('UPDATE users SET Balance = Balance + %s WHERE DiscordUser = %s;', (amount, str(ctx.author),))
+                await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
+                newBal = await asyncio.gather(discur.fetchone())
+                newBal = newBal[0]['Balance']
+
+                if (newBal == curBal):
+                    await ctx.send(f"An error has occured. {ctx.author.mention}'s balance has not changed and no coins were lost")
+                    dzconn.close()
+                    disconn.close()
+                    return
+
+                #Update their In Game Coins
+                await dzcur.execute('UPDATE player_data SET BankCoins = BankCoins - %s WHERE PlayerUID = %s;', (amount, steamid))
+
+                # Check if it actually changed
+                await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
+                new = await asyncio.gather(dzcur.fetchone())
+
+                print("got here")
+                if (original == new):
+                    await ctx.send(f"An error has occured. {ctx.author.mention}'s coins have not changed")
+                    dzconn.close()
+                    disconn.close()
+                    return
+                print("got here")
+                embed = discord.Embed(
+                    title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
+                embed.set_footer(text="PGServerManager | TwiSt#2791")
+                embed.add_field(
+                    name="Data:", value=f"{ctx.author.mention} has deposited **{amount} Coins** to balance!\n"
+                                        f"{ctx.author.mention}'s new balance is {newBal}", inline=False)
+                await ctx.send(embed=embed)
+                await GamblingCog.gamblelog(self, ctx, newBal, "Withdraw")
+                dzconn.close()
+                disconn.close()
+                return
+            else:
+                #User was in game
+                embed = discord.Embed(
+                    title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
+                embed.set_footer(text="PGServerManager | TwiSt#2791")
+                embed.add_field(
+                    name="Error:", value=f"The STEAM64ID bound to {ctx.author.mention} ({steamid}) is currently in game")
+                await ctx.send(embed=embed)
+                dzconn.close()
+                disconn.close()
+                return
+        else:
+            await ctx.send(f"The DiscordUser: {ctx.author.mention} is not registered. Please create a ticket with your SteamID in the subject!")
+            dzconn.close()
+            disconn.close()
+            return
+
+    
+    @commands.command(aliases=['claim'])
+    async def withdraw(self, ctx, amount: int):
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
         dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
@@ -224,116 +306,82 @@ class GamblingCog:
             await ctx.send(f"{ctx.author.mention} used an invalid amount of {amount}")
             return
         
-        dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
-        dzcur = await dzconn.cursor(aiomysql.DictCursor)
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
 
         if await GamblingCog.check_id(self, ctx.author):
             steamid = await GamblingCog.get_steamid(self, ctx.author)
-            curPlayers = await GamblingCog.currentplayers(self, ctx)
-            if (steamid not in curPlayers):
-                # Get starting value
-                await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
-                curCoins = await asyncio.gather(dzcur.fetchone())
-                curCoins = curCoins[0]['BankCoins']
-                # Check if they have enough
-                if(curCoins and (curCoins >= amount)):
-                    # Check if another user has gone in before going in again
+            # Get starting value
+            await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
+            curBal = await asyncio.gather(discur.fetchone())
+            curBal = curBal[0]['Balance']
+            # Check if they have enough
+            if(curBal and (curBal >= amount)):
+                # Check if another user has gone in before going in again
+                await discur.execute('SELECT * FROM jackpot')
+                curPot = await asyncio.gather(discur.fetchall())
+                if self.openpot == False:
+                    await ctx.send("The pot currently is not open try again in a minute!")
+                    disconn.close()
+                    return
+                if(len(curPot[0]) == 1 and (curPot[0][0]['DiscordUser'] == str(ctx.author))):
+                    await ctx.send("Wait until another user goes in before going in again")
+                    disconn.close()
+                    return
+                await discur.execute('INSERT INTO jackpot (DiscordUser, Amount) VALUES (%s,%s);', (str(ctx.author), amount))
+                # Remove coins
+                await discur.execute('UPDATE users SET Balance = Balance - %s WHERE DiscordUser = %s;', (amount, str(ctx.author)))
+                await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
+                newBal = await asyncio.gather(discur.fetchone())
+                newBal = newBal[0]['Balance']
+                if newBal != curBal:
                     await discur.execute('SELECT * FROM jackpot')
                     curPot = await asyncio.gather(discur.fetchall())
-                    if self.openpot == False:
-                        await ctx.send("The pot currently is not open try again in a minute!")
-                        dzconn.close()
-                        disconn.close()
-                        return
-                    if(len(curPot[0]) == 1 and (curPot[0][0]['DiscordUser'] == str(ctx.author))):
-                        await ctx.send("Wait until another user goes in before going in again")
-                        dzconn.close()
-                        disconn.close()
-                        return
-                    await discur.execute('INSERT INTO jackpot (DiscordUser, Amount) VALUES (%s,%s);', (str(ctx.author), amount))
-                    # Remove coins
-                    await dzcur.execute('UPDATE player_data SET BankCoins = BankCoins - %s WHERE PlayerUID = %s;', (amount, steamid))
-                    await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
-                    newCoins = await asyncio.gather(dzcur.fetchone())
-                    newCoins = newCoins[0]['BankCoins']
-                    if newCoins != curCoins:
-                        await discur.execute('SELECT * FROM jackpot')
-                        curPot = await asyncio.gather(discur.fetchall())
-                        trueTotal = 0
-                        curTotal = 0
-                        curTicket = 0
-                        tickets = []
-                        for x in curPot[0]:
-                            # Get the players true total
-                            if (x['DiscordUser'] == str(ctx.author)):
-                                trueTotal += x['Amount']
-                            # Get all tickets
-                            if(x['TicketEnd']):
-                                tickets.append(x['TicketEnd'])
-                            else:
-                                tickets.append(0)
-                            # Get total of all bets
-                            curTotal += x['Amount']
-                        # Calculate chance of winning
-                        chance = (100 * (float(trueTotal) / float(curTotal)))
-                        chance = "{0:.2f}".format(chance)
-
-                        # Find the current ticket
-                        if (max(tickets) == 0):
-                            curTicket = 0
-                        else:
-                            curTicket += max(tickets)
-                            curTicket += 1
-                        # await discur.execute('UPDATE jackpot SET TicketStart = %s, TicketEnd = %s, Place = %s WHERE DiscordUser = %s;', (curTicket, curTicket + amount, place, str(ctx.author)))
-                        # await discur.execute('UPDATE jackpot SET Place = %s WHERE DiscordUser = %s;', (place, str(ctx.author)))
-                        # Start the countdown with 2 players
-                        embed = discord.Embed(
-                            title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
-                        embed.set_footer(text="PGServerManager | TwiSt#2791")
-                        embed.add_field(
-                            name="Data:", value=f"{ctx.author.mention} has entered the jackpot with **{amount} Coins**!")
-                        embed.add_field(
-                            name="Current Chance:", value=f"{ctx.author.mention} current chance of winning is {chance}%")
-                        await ctx.send(embed=embed)
-                        await GamblingCog.gamblelog(self, ctx, amount, "Jackpot")
-                        if(len(curPot[0]) == 2):
-                            await GamblingCog.startcountdown(self, ctx)
-                    else:
-                        # Coins didn't change
-                        embed = discord.Embed(
-                            title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
-                        embed.set_footer(text="PGServerManager | TwiSt#2791")
-                        embed.add_field(
-                            name="Error:", value=f"{ctx.author.mention}, an error has occured and your coins haven't changed!")
-                        await ctx.send(embed=embed)
-                        # Close the connections
-                        dzconn.close()
-                        disconn.close()
-                        return
+                    trueTotal = 0
+                    curTotal = 0
+                    for x in curPot[0]:
+                        # Get the players true total
+                        if (x['DiscordUser'] == str(ctx.author)):
+                            trueTotal += x['Amount']
+                        # Get total of all bets
+                        curTotal += x['Amount']
+                    # Calculate chance of winning
+                    chance = (100 * (float(trueTotal) / float(curTotal)))
+                    chance = "{0:.2f}".format(chance)
+                    
+                    embed = discord.Embed(
+                        title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
+                    embed.set_footer(text="PGServerManager | TwiSt#2791")
+                    embed.add_field(
+                        name="Data:", value=f"{ctx.author.mention} has entered the jackpot with **{amount} Coins**!")
+                    embed.add_field(
+                        name="Current Chance:", value=f"{ctx.author.mention} current chance of winning is {chance}%")
+                    await ctx.send(embed=embed)
+                    await GamblingCog.gamblelog(self, ctx, amount, "Jackpot")
+                    # Start the countdown with 2 players
+                    if(len(curPot[0]) == 2):
+                        await GamblingCog.startcountdown(self, ctx)
+                    
                 else:
-                    # Not enough Coins
+                    # Coins didn't change
                     embed = discord.Embed(
                         title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
                     embed.set_footer(text="PGServerManager | TwiSt#2791")
                     embed.add_field(
-                        name="Error:", value=f"{ctx.author.mention} does not have enough BankCoins for this bet!")
+                        name="Error:", value=f"{ctx.author.mention}, an error has occured and your coins haven't changed!")
                     await ctx.send(embed=embed)
                     # Close the connections
-                    dzconn.close()
                     disconn.close()
                     return
             else:
-                # User was in game
+                # Not enough Coins
                 embed = discord.Embed(
                     title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
                 embed.set_footer(text="PGServerManager | TwiSt#2791")
                 embed.add_field(
-                    name="Error:", value=f"The STEAM64ID bound to {ctx.author.mention} ({steamid}) is currently in game")
+                    name="Error:", value=f"{ctx.author.mention} does not have enough in their Balance for this bet!")
                 await ctx.send(embed=embed)
                 # Close the connections
-                dzconn.close()
                 disconn.close()
                 return
         else:
@@ -343,13 +391,11 @@ class GamblingCog:
             embed.set_footer(text="PGServerManager | TwiSt#2791")
             embed.add_field(
                 name="Error:", value=f"The Discord Account {ctx.author.mention} is currently not registered!\n"
-                f"Please make a ticket as follows : `-new registration INSERTSTEAM64ID`", inline=False)
+                                    f"Please make a ticket as follows : `-new registration INSERTSTEAM64ID`", inline=False)
             await ctx.send(embed=embed)
             # Close the connections
-            dzconn.close()
             disconn.close()
             return
-        dzconn.close()
         disconn.close()
 
 
