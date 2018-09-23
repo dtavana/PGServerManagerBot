@@ -21,7 +21,7 @@ class PGManager(commands.Bot):
 		super().__init__(command_prefix=self.get_pref, case_insensitive=True)
 
 	async def get_pref(self, bot, ctx):
-		return 'pg '
+		return ['Pg ', 'pg ']
 		'''
 		await self.discur.execute("SELECT prefix FROM prefixes WHERE guildid=$1;", ctx.guild.id)
 		result = await asyncio.gather(self.discur.fetchone())

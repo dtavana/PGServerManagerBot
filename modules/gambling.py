@@ -128,13 +128,28 @@ class GamblingCog:
 
         winnerUser = winner[0]['DiscordUser']
         winnerMember = discord.utils.find(lambda m: str(m) == winnerUser, ctx.guild.members)
-        await ctx.send(f"{winnerMember.mention} won {total} coins. Ticket#{winningTicket}")
+        
+        await discur.execute('SELECT * FROM jackpot')
+        curPot = await asyncio.gather(discur.fetchall())
+        winnerTotal = 0
+        curTotal = 0
+        for x in curPot[0]:
+            # Get the players true total
+            if (x['DiscordUser'] == winnerUser):
+                winnerTotal += x['Amount']
+            curTotal += x['Amount']
+        
+        # Calculate chance of winning
+        chance = (100 * (float(winnerTotal) / float(curTotal)))
+        chance = "{0:.2f}".format(chance)
+        
+        await ctx.send(f"{winnerMember.mention} won **{total}** coins with a **{chance}%** chance. Ticket#**{winningTicket}**")
         await ctx.send(f"Use `pg claim ENTERAMOUNT` to claim your rewards!")
         await discur.execute('UPDATE users SET Balance = Balance + %s WHERE DiscordUser = %s;', (total, winnerUser))
         await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (winnerUser))
         curBal = await asyncio.gather(discur.fetchone())
         curBal = curBal[0]['Balance']
-        await ctx.send(f"{winnerMember.mention}'s new balance is {curBal}")
+        await ctx.send(f"{winnerMember.mention}'s new balance is **{curBal}**")
         await discur.execute('DELETE FROM jackpot')
         self.openpot = True
         disconn.close()
@@ -185,13 +200,12 @@ class GamblingCog:
                 await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
                 new = await asyncio.gather(dzcur.fetchone())
 
-                print("got here")
                 if (original == new):
                     await ctx.send(f"An error has occured. {ctx.author.mention}'s coins have not changed")
                     dzconn.close()
                     disconn.close()
                     return
-                print("got here")
+
                 embed = discord.Embed(
                     title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
                 embed.set_footer(text="PGServerManager | TwiSt#2791")
@@ -339,12 +353,16 @@ class GamblingCog:
                     curPot = await asyncio.gather(discur.fetchall())
                     trueTotal = 0
                     curTotal = 0
+                    currentBets = {}
                     for x in curPot[0]:
                         # Get the players true total
                         if (x['DiscordUser'] == str(ctx.author)):
                             trueTotal += x['Amount']
                         # Get total of all bets
                         curTotal += x['Amount']
+                        #Get all users current bets
+                        currentBets[x['DiscordUser']] = x['Amount']           
+                    
                     # Calculate chance of winning
                     chance = (100 * (float(trueTotal) / float(curTotal)))
                     chance = "{0:.2f}".format(chance)
@@ -356,6 +374,8 @@ class GamblingCog:
                         name="Data:", value=f"{ctx.author.mention} has entered the jackpot with **{amount} Coins**!")
                     embed.add_field(
                         name="Current Chance:", value=f"{ctx.author.mention} current chance of winning is {chance}%")
+                    #embed.add_field(
+                        #name="Player:", value=f"{ctx.author.mention} current chance of winning is {chance}%")
                     await ctx.send(embed=embed)
                     await GamblingCog.gamblelog(self, ctx, amount, "Jackpot")
                     # Start the countdown with 2 players
