@@ -516,6 +516,64 @@ class DBCommandsCog:
             await ctx.author.send(embed=embed)
             dzconn.close()
             disconn.close()
+    
+    '''
+    @commands.command()
+    @commands.has_any_role("Owner","Developer")
+    async def maintain(self, ctx):
+        disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
+        discur = await disconn.cursor(aiomysql.DictCursor)
+        dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
+        dzcur = await dzconn.cursor(aiomysql.DictCursor)
+
+        yOffset = 153.60
+        
+        try:
+            if await DBCommandsCog.check_id(self, ctx.author):
+                steamid = await DBCommandsCog.get_steamid(self, ctx.author)
+                #dzcur.execute("""SELECT Worldspace FROM object_data WHERE LOCATE(%s, Worldspace) > 0 AND Classname = 'Plastic_Pole_EP1_DZ';""", (steamid,))
+                await dzcur.execute(
+                    """SELECT Worldspace FROM object_data WHERE LOCATE(76561198269591338, Worldspace) > 0 AND Classname = 'Plastic_Pole_EP1_DZ';""")
+                worldspace = await asyncio.gather(dzcur.fetchone())
+                worldspace = worldspace[0]['Worldspace']
+                #Get only the coordinates
+                worldspace = worldspace.split('"')
+                worldspace = worldspace[0]
+                #Remove the trailing comma
+                worldspace = worldspace[:-1]
+                #Replace the brackets
+                worldspace = worldspace.replace("[", "")
+                worldspace = worldspace.replace("]", "")
+                #Put the coordinates in an array
+                worldspace = worldspace.split(',')
+                xWorldspace = worldspace[1]
+                yWorldspace = worldspace[2]
+                zWorldspace = worldspace[3]
+                #TODO: Convert
+                #Find all objects nearby
+                xTop = xWorldspace + 50
+                xBot = xWorldspace - 50
+                yTop = yWorldspace + 50
+                yBot = yWorldspace - 50
+                zTop = zWorldspace + 50
+                zBot = zWorldspace - 50
+                dzcur.execute('SELECT ObjectUID FROM object_data WHERE World')
+                
+
+
+                
+                print(worldspace)
+                print(type(worldspace))
+
+            else:
+                #User was not registered
+                pass
+        except Exception as e:
+            dzconn.close()
+            disconn.close()
+            await ctx.send(f"{e}")
+            print("closed")
+'''           
 
 
 def setup(bot):

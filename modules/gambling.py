@@ -118,7 +118,7 @@ class GamblingCog:
         for x in curPot[0]:
             ticketsFin.append(x['TicketEnd'])
             total += x['Amount']
-        winningTicket = random.randint(1, max(ticketsFin))
+        winningTicket = random.randint(1, max(ticketsFin) + 1)
         await discur.execute('SELECT DiscordUser from jackpot WHERE TicketStart <= %s and TicketEnd >= %s;', (winningTicket, winningTicket))
         winner = await asyncio.gather(discur.fetchone())
         while winner[0] == None:
