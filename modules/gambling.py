@@ -263,7 +263,7 @@ class GamblingCog:
 
                 if (origCoins + amount > 20000000):
                     await ctx.send(f"{ctx.author.mention} can not claim {amount} coins as it will put their bank over 20,000,000")
-                    await ctx.send(f"{ctx.author.mention} current BankCoins is {origCoins}")
+                    await ctx.send(f"{ctx.author.mention}'s current BankCoins is {origCoins}")
                     dzconn.close()
                     disconn.close()
                     return
