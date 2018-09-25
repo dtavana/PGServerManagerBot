@@ -82,7 +82,7 @@ class GamblingCog:
 
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
-        
+
         await ctx.send("Countdown for the jackpot has started!")
         await asyncio.sleep(15)
         await ctx.send("45 seconds left to join the pot!")
@@ -93,7 +93,7 @@ class GamblingCog:
         await asyncio.sleep(10)
         await ctx.send("5 seconds left to join the pot!")
         await asyncio.sleep(5)
-        
+
         self.openpot = False
         await ctx.send("Jackpot has closed! Picking a winner...")
         await discur.execute('SELECT DiscordUser, Amount, BetID FROM jackpot')
@@ -127,8 +127,9 @@ class GamblingCog:
             winner = await asyncio.gather(discur.fetchone())
 
         winnerUser = winner[0]['DiscordUser']
-        winnerMember = discord.utils.find(lambda m: str(m) == winnerUser, ctx.guild.members)
-        
+        winnerMember = discord.utils.find(
+            lambda m: str(m) == winnerUser, ctx.guild.members)
+
         await discur.execute('SELECT * FROM jackpot')
         curPot = await asyncio.gather(discur.fetchall())
         winnerTotal = 0
@@ -138,11 +139,11 @@ class GamblingCog:
             if (x['DiscordUser'] == winnerUser):
                 winnerTotal += x['Amount']
             curTotal += x['Amount']
-        
+
         # Calculate chance of winning
         chance = (100 * (float(winnerTotal) / float(curTotal)))
         chance = "{0:.2f}".format(chance)
-        
+
         await ctx.send(f"{winnerMember.mention} won **{total}** coins with a **{chance}%** chance. Ticket#**{winningTicket}**")
         await ctx.send(f"Use `pg claim ENTERAMOUNT` to claim your rewards!")
         await discur.execute('UPDATE users SET Balance = Balance + %s WHERE DiscordUser = %s;', (total, winnerUser))
@@ -153,32 +154,32 @@ class GamblingCog:
         await discur.execute('DELETE FROM jackpot')
         self.openpot = True
         disconn.close()
-    
+
     @commands.command()
     async def deposit(self, ctx, amount: int):
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
         dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
         dzcur = await dzconn.cursor(aiomysql.DictCursor)
-       
+
         if await GamblingCog.check_id(self, ctx.author):
             steamid = await GamblingCog.get_steamid(self, ctx.author)
-            #Get the users current balance
+            # Get the users current balance
             await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
             curBal = await asyncio.gather(discur.fetchone())
             curBal = curBal[0]['Balance']
-            #Get users current BankCoins
+            # Get users current BankCoins
             await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
             original = await asyncio.gather(dzcur.fetchone())
             origCoins = original[0]['BankCoins']
 
             if (amount > origCoins):
-                #Check if they have enough
+                # Check if they have enough
                 await ctx.send(f"{ctx.author.mention} does not have enough coins in their bank to add {amount} to their balance")
                 dzconn.close()
                 disconn.close()
                 return
-            
+
             curPlayers = await GamblingCog.currentplayers(self, ctx)
             if (steamid not in curPlayers):
                 # Update the balance
@@ -193,7 +194,7 @@ class GamblingCog:
                     disconn.close()
                     return
 
-                #Update their In Game Coins
+                # Update their In Game Coins
                 await dzcur.execute('UPDATE player_data SET BankCoins = BankCoins - %s WHERE PlayerUID = %s;', (amount, steamid))
 
                 # Check if it actually changed
@@ -218,7 +219,7 @@ class GamblingCog:
                 disconn.close()
                 return
             else:
-                #User was in game
+                # User was in game
                 embed = discord.Embed(
                     title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
                 embed.set_footer(text="PGServerManager | TwiSt#2791")
@@ -234,7 +235,6 @@ class GamblingCog:
             disconn.close()
             return
 
-    
     @commands.command(aliases=['claim'])
     async def withdraw(self, ctx, amount: int):
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
@@ -255,7 +255,7 @@ class GamblingCog:
                     dzconn.close()
                     disconn.close()
                     return
-                
+
                 # Get starting value
                 await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
                 original = await asyncio.gather(dzcur.fetchone())
@@ -315,11 +315,11 @@ class GamblingCog:
         if (ctx.channel != channel):
             await ctx.send(f"Please run this in <#{jackpotchanid}>")
             return
-        
-        if amount < 1:
-            await ctx.send(f"{ctx.author.mention} used an invalid amount of {amount}")
+
+        if amount < 5000:
+            await ctx.send(f"{ctx.author.mention} needs to bet at least 5000 coins!")
             return
-        
+
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
 
@@ -353,20 +353,21 @@ class GamblingCog:
                     curPot = await asyncio.gather(discur.fetchall())
                     trueTotal = 0
                     curTotal = 0
-                    currentBets = {}
+                    currentPlayers = []
                     for x in curPot[0]:
                         # Get the players true total
                         if (x['DiscordUser'] == str(ctx.author)):
                             trueTotal += x['Amount']
                         # Get total of all bets
                         curTotal += x['Amount']
-                        #Get all users current bets
-                        currentBets[x['DiscordUser']] = x['Amount']           
-                    
+                        # Get all users current bets
+                        if x['DiscordUser'] not in currentPlayers:
+                            currentPlayers.append(x['DiscordUser'])
+
                     # Calculate chance of winning
                     chance = (100 * (float(trueTotal) / float(curTotal)))
                     chance = "{0:.2f}".format(chance)
-                    
+
                     embed = discord.Embed(
                         title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
                     embed.set_footer(text="PGServerManager | TwiSt#2791")
@@ -374,14 +375,15 @@ class GamblingCog:
                         name="Data:", value=f"{ctx.author.mention} has entered the jackpot with **{amount} Coins**!")
                     embed.add_field(
                         name="Current Chance:", value=f"{ctx.author.mention} current chance of winning is {chance}%")
-                    #embed.add_field(
-                        #name="Player:", value=f"{ctx.author.mention} current chance of winning is {chance}%")
+
+                    # embed.add_field(
+                    # name="Player:", value=f"{ctx.author.mention}'s current chance of winning is {chance}%")
                     await ctx.send(embed=embed)
                     await GamblingCog.gamblelog(self, ctx, amount, "Jackpot")
                     # Start the countdown with 2 players
                     if(len(curPot[0]) == 2):
                         await GamblingCog.startcountdown(self, ctx)
-                    
+
                 else:
                     # Coins didn't change
                     embed = discord.Embed(
@@ -411,7 +413,7 @@ class GamblingCog:
             embed.set_footer(text="PGServerManager | TwiSt#2791")
             embed.add_field(
                 name="Error:", value=f"The Discord Account {ctx.author.mention} is currently not registered!\n"
-                                    f"Please make a ticket as follows : `-new registration INSERTSTEAM64ID`", inline=False)
+                f"Please make a ticket as follows : `-new registration INSERTSTEAM64ID`", inline=False)
             await ctx.send(embed=embed)
             # Close the connections
             disconn.close()
