@@ -129,6 +129,8 @@ class GamblingCog:
         winnerUser = winner[0]['DiscordUser']
         winnerMember = discord.utils.find(
             lambda m: str(m) == winnerUser, ctx.guild.members)
+        if winnerMember == None:
+            winnerMember = winnerUser
 
         await discur.execute('SELECT * FROM jackpot')
         curPot = await asyncio.gather(discur.fetchall())
@@ -176,6 +178,13 @@ class GamblingCog:
             if (amount > origCoins):
                 # Check if they have enough
                 await ctx.send(f"{ctx.author.mention} does not have enough coins in their bank to add {amount} to their balance")
+                dzconn.close()
+                disconn.close()
+                return
+
+            if (amount + curBal > 20000000):
+                # Over Max Balance
+                await ctx.send(f"{ctx.author.mention} can not add {amount} coins it would put their balance of {curBal} over 20000000")
                 dzconn.close()
                 disconn.close()
                 return
