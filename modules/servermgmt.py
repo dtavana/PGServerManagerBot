@@ -15,8 +15,6 @@ import subprocess
 class ServerManagementCog:
     def __init__(self, bot):
         self.bot = bot
-
-    '''
     
     @commands.command()
     @commands.has_any_role("Owner", "Developer", "Head Admin", "Super Admin")
@@ -38,11 +36,8 @@ class ServerManagementCog:
         if reaction.emoji != "\U0001f44d":
             await ctx.send("Command cancelled")
             return
-        subprocess.call(['taskkill', '/F', '/IM', 'arma2oaserver2.exe'])
-        p = subprocess.Popen(
-            'start C:\\Users\\TwiSt\\Desktop\\Files\\PGServerManagerBot\\forceclosecherno.lnk', shell=True)
-        p.wait()
-        '''
+        subprocess.call(
+            ['cmd', 'start C:\\Users\\TwiSt\\Desktop\\Files\\PGServerManagerBot\\forceclosecherno.lnk'])
 
 
 def setup(bot):
