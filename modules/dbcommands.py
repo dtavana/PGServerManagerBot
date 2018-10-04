@@ -398,7 +398,7 @@ class DBCommandsCog:
             try:
                 newuser = await commands.MemberConverter().convert(ctx, player)
             except:
-                await ctx.send(f"Invalid value for user: `{player}` (Must be a **Discord User* or a Valid **STEAM64ID**)")
+                await ctx.send(f"Invalid value for user: `{player}` (Must be a **Discord User** or a Valid **STEAM64ID**)")
                 dzconn.close()
                 return
 
