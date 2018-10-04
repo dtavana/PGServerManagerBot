@@ -96,7 +96,7 @@ class DBCommandsCog:
     # --------------Commands--------------
     @commands.command()
     @commands.has_any_role("Owner", "Manager", "Developer", "Head Admin", "Super Admin")
-    async def coins(self, ctx, player: discord.Member, amount: int):
+    async def coins(self, ctx, player: str, amount: int):
         '''
         Changes a player's BankCoins in the Database
         '''
@@ -216,11 +216,11 @@ class DBCommandsCog:
                             title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
                         embed.set_footer(text="PGServerManager | TwiSt#2791")
                         embed.add_field(
-                            name="Data:", value=f"{player.mention} has received **{amount} Coins to Bank**!")
+                            name="Data:", value=f"`{steamid}` has received **{amount} Coins to Bank**!")
                         embed.add_field(
-                            name="Original:", value=f"{player.mention} had **{original[0]['BankCoins']} Coins in Bank**!")
+                            name="Original:", value=f"`{steamid}` had **{original[0]['BankCoins']} Coins in Bank**!")
                         embed.add_field(
-                            name="New:", value=f"{player.mention} now has **{new[0]['BankCoins']} Coins in Bank**!")
+                            name="New:", value=f"`{steamid}` now has **{new[0]['BankCoins']} Coins in Bank**!")
                         await ctx.send(embed=embed)
                         await DBCommandsCog.amountlog(self, ctx, amount, player, "Coins to Bank")
                 else:
@@ -242,143 +242,146 @@ class DBCommandsCog:
 
     @commands.command()
     @commands.has_any_role("Owner", "Manager", "Developer", "Head Admin", "Super Admin")
-    async def xp(self, ctx, player: discord.Member, amount: int):
+    async def xp(self, ctx, player: str, amount: int):
+        '''
+        Changes a player's BankCoins in the Database
+        '''
         # Open Connection
         dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
         dzcur = await dzconn.cursor(aiomysql.DictCursor)
 
-        if await DBCommandsCog.check_id(self, player):
-            steamid = await DBCommandsCog.get_steamid(self, player)
-            curPlayers = await DBCommandsCog.currentplayers(self, ctx)
-            if (steamid not in curPlayers):
-
-                embed = discord.Embed(
-                    title=f"ReactToConfirm \U0001f4b1", colour=discord.Colour(0xFFA500))
-                embed.set_footer(text="PGServerManager | TwiSt#2791")
-                embed.add_field(name="**Type:**", value=f"`XP`")
-                embed.add_field(name="**Amount:**", value=f"`{amount}`")
-                embed.add_field(name="STEAM64ID:", value=f"`{steamid}`")
-                message = await ctx.send(embed=embed)
-                await message.add_reaction("\U0001f44d")
-                await message.add_reaction("\U0001f44e")
-
-                def reactioncheck(reaction, user):
-                    validreactions = ["\U0001f44d", "\U0001f44e"]
-                    return user.id == ctx.author.id and reaction.emoji in validreactions
-                reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck)
-                # Check if thumbs up
-                if reaction.emoji != "\U0001f44d":
-                    await ctx.send("Command cancelled")
-                    dzconn.close()
-                    return
-
-                # Get starting value
-                await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
-                original = await asyncio.gather(dzcur.fetchone())
-
-                await dzcur.execute('UPDATE xpsystem SET XP = XP + %s WHERE PlayerUID = %s;', (amount, steamid))
-
-                # Check if it actually changed
-                await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
-                new = await asyncio.gather(dzcur.fetchone())
-
-                if(new == original):
-                    await ctx.send("An error has occured! Nothing has been changed. Please fix your syntax")
-                else:
+        # Checks to see if user is registered
+        if(await DBCommandsCog.validsteamidcheck(self, ctx, player) != True):
+            try:
+                newuser = await commands.MemberConverter().convert(ctx, player)
+            except:
+                await ctx.send(f"Invalid value for user: `{player}` (Must be a **Discord User* or a Valid **STEAM64ID**)")
+                dzconn.close()
+                disconn.close()
+                return
+            if await DBCommandsCog.check_id(self, player):
+                steamid = await DBCommandsCog.get_steamid(self, player)
+                curPlayers = await DBCommandsCog.currentplayers(self, ctx)
+                if(steamid not in curPlayers):
                     embed = discord.Embed(
-                        title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
+                        title=f"ReactToConfirm \U0001f4b1", colour=discord.Colour(0xFFA500))
+                    embed.set_footer(text="PGServerManager | TwiSt#2791")
+                    embed.add_field(name="**Type:**", value=f"`XP`")
+                    embed.add_field(name="**Amount:**", value=f"`{amount}`")
+                    embed.add_field(name="**STEAM64ID:**",
+                                    value=f"`{steamid}`")
+                    message = await ctx.send(embed=embed)
+                    await message.add_reaction("\U0001f44d")
+                    await message.add_reaction("\U0001f44e")
+
+                    def reactioncheck(reaction, user):
+                        validreactions = ["\U0001f44d", "\U0001f44e"]
+                        return user.id == ctx.author.id and reaction.emoji in validreactions
+                    reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck)
+                    # Check if thumbs up
+                    if reaction.emoji != "\U0001f44d":
+                        await ctx.send("Command cancelled")
+                        dzconn.close()
+                        return
+
+                    # Get starting value
+                    await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
+                    original = await asyncio.gather(dzcur.fetchone())
+
+                    # Perform the query
+                    await dzcur.execute('UPDATE xpsystem SET XP = XP + %s WHERE PlayerUID = %s;', (amount, steamid))
+
+                    # Check if it actually changed
+                    await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
+                    new = await asyncio.gather(dzcur.fetchone())
+                    if(new == original):
+                        await ctx.send("An error has occured! Nothing has been changed. Please fix your syntax")
+                    else:
+                        embed = discord.Embed(
+                            title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
+                        embed.set_footer(text="PGServerManager | TwiSt#2791")
+                        embed.add_field(
+                            name="Data:", value=f"{player.mention} has received **{amount} XP**!")
+                        embed.add_field(
+                            name="Original:", value=f"{player.mention} had **{original[0]['XP']} XP**!")
+                        embed.add_field(
+                            name="New:", value=f"{player.mention} now has **{new[0]['XP']} XP**!")
+                        await ctx.send(embed=embed)
+                        await DBCommandsCog.amountlog(self, ctx, amount, player, "XP")
+                else:
+                    # User was in game
+                    embed = discord.Embed(
+                        title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
                     embed.set_footer(text="PGServerManager | TwiSt#2791")
                     embed.add_field(
-                        name="Data:", value=f"{player.mention} has received **{amount} XP**!")
-                    embed.add_field(
-                        name="Original:", value=f"{player.mention} had **{original[0]['XP']} XP**!")
-                    embed.add_field(
-                        name="New:", value=f"{player.mention} now has **{new[0]['XP']} XP**!")
+                        name="Error:", value=f"The STEAM64ID bound to {player.mention} ({steamid}) is currently in game")
                     await ctx.send(embed=embed)
-                    await DBCommandsCog.amountlog(self, ctx, amount, player, "XP")
-            else:
-                # User was in game
-                embed = discord.Embed(
-                    title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
-                embed.set_footer(text="PGServerManager | TwiSt#2791")
-                embed.add_field(
-                    name="Error:", value=f"The STEAM64ID bound to {player.mention} ({steamid}) is currently in game")
-                await ctx.send(embed=embed)
-                dzconn.close()
-                return
-        else:
-            await ctx.send(f"The DiscordUser: {user.mention} is not registered. Please create a ticket with your SteamID in the subject!")
-
-        # Close Connection
-        dzconn.close()
-
-    @commands.command()
-    @commands.has_any_role("Owner", "Manager", "Developer", "Head Admin", "Super Admin")
-    async def humanity(self, ctx, player: discord.Member, amount: int):
-        # Open Connection
-        dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
-        dzcur = await dzconn.cursor(aiomysql.DictCursor)
-
-        if await DBCommandsCog.check_id(self, player):
-            steamid = await DBCommandsCog.get_steamid(self, player)
-            curPlayers = await DBCommandsCog.currentplayers(self, ctx)
-            if (steamid not in curPlayers):
-                embed = discord.Embed(
-                    title=f"ReactToConfirm \U0001f4b1", colour=discord.Colour(0xFFA500))
-                embed.set_footer(text="PGServerManager | TwiSt#2791")
-                embed.add_field(name="**Type:**", value=f"`Humanity`")
-                embed.add_field(name="**Amount:**", value=f"`{amount}`")
-                embed.add_field(name="**STEAM64ID:**", value=f"`{steamid}`")
-                message = await ctx.send(embed=embed)
-                await message.add_reaction("\U0001f44d")
-                await message.add_reaction("\U0001f44e")
-
-                def reactioncheck(reaction, user):
-                    validreactions = ["\U0001f44d", "\U0001f44e"]
-                    return user.id == ctx.author.id and reaction.emoji in validreactions
-                reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck)
-                # Check if thumbs up
-                if reaction.emoji != "\U0001f44d":
-                    await ctx.send("Command cancelled")
                     dzconn.close()
                     return
-
-                # Get starting value
-                await dzcur.execute('SELECT Humanity FROM character_data WHERE PlayerUID = %s;', (steamid,))
-                original = await asyncio.gather(dzcur.fetchone())
-
-                await dzcur.execute('UPDATE character_data SET Humanity = Humanity + %s WHERE PlayerUID = %s;', (amount, steamid))
-
-                # Check if it actually changed
-                await dzcur.execute('SELECT Humanity FROM character_data WHERE PlayerUID = %s;', (steamid,))
-                new = await asyncio.gather(dzcur.fetchone())
-
-                if(new == original):
-                    await ctx.send("An error has occured! Nothing has been changed. Please fix your syntax")
-                else:
+            else:
+                await ctx.send(f"The DiscordUser: {player.mention} is not registered.")
+        else:
+            steamid = player
+            if await DBCommandsCog.validsteamidcheck(self, ctx, steamid):
+                curPlayers = await DBCommandsCog.currentplayers(self, ctx)
+                if(steamid not in curPlayers):
                     embed = discord.Embed(
-                        title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
+                        title=f"ReactToConfirm \U0001f4b1", colour=discord.Colour(0xFFA500))
+                    embed.set_footer(text="PGServerManager | TwiSt#2791")
+                    embed.add_field(name="**Type:**", value=f"`XP`")
+                    embed.add_field(name="**Amount:**", value=f"`{amount}`")
+                    embed.add_field(name="**STEAM64ID:**",
+                                    value=f"`{steamid}`")
+                    message = await ctx.send(embed=embed)
+                    await message.add_reaction("\U0001f44d")
+                    await message.add_reaction("\U0001f44e")
+
+                    def reactioncheck(reaction, user):
+                        validreactions = ["\U0001f44d", "\U0001f44e"]
+                        return user.id == ctx.author.id and reaction.emoji in validreactions
+                    reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck)
+                    # Check if thumbs up
+                    if reaction.emoji != "\U0001f44d":
+                        await ctx.send("Command cancelled")
+                        dzconn.close()
+                        return
+
+                    # Get starting value
+                    await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
+                    original = await asyncio.gather(dzcur.fetchone())
+
+                    # Perform the query
+                    await dzcur.execute('UPDATE xpsystem SET XP = XP + %s WHERE PlayerUID = %s;', (amount, steamid))
+
+                    # Check if it actually changed
+                    await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
+                    new = await asyncio.gather(dzcur.fetchone())
+                    if(new == original):
+                        await ctx.send("An error has occured! Nothing has been changed. Please fix your syntax")
+                    else:
+                        embed = discord.Embed(
+                            title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
+                        embed.set_footer(text="PGServerManager | TwiSt#2791")
+                        embed.add_field(
+                            name="Data:", value=f"`{steamid}` has received **{amount} XP**!")
+                        embed.add_field(
+                            name="Original:", value=f"`{steamid}` had **{original[0]['XP']} XP**!")
+                        embed.add_field(
+                            name="New:", value=f"`{steamid}` now has **{new[0]['XP']} XP**!")
+                        await ctx.send(embed=embed)
+                        await DBCommandsCog.amountlog(self, ctx, amount, player, "XP")
+                else:
+                    # User was in game
+                    embed = discord.Embed(
+                        title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
                     embed.set_footer(text="PGServerManager | TwiSt#2791")
                     embed.add_field(
-                        name="Data:", value=f"{player.mention} has received **{amount} Humanity**!")
-                    embed.add_field(
-                        name="Original:", value=f"{player.mention} had **{original[0]['Humanity']} Humanity**!")
-                    embed.add_field(
-                        name="New:", value=f"{player.mention} now has **{new[0]['Humanity']} Humanity**!")
+                        name="Error:", value=f"The STEAM64ID `{steamid}` is currently in game")
                     await ctx.send(embed=embed)
-                    await DBCommandsCog.amountlog(self, ctx, amount, player, "Humanity")
+                    dzconn.close()
+                    return
             else:
-                # User was in game
-                embed = discord.Embed(
-                    title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
-                embed.set_footer(text="PGServerManager | TwiSt#2791")
-                embed.add_field(
-                    name="Error:", value=f"The STEAM64ID bound to {player.mention} ({steamid}) is currently in game")
-                await ctx.send(embed=embed)
-                dzconn.close()
-                return
-        else:
-            await ctx.send(f"The DiscordUser: {user.mention} is not registered. Please create a ticket with your SteamID in the subject!")
+                await ctx.send(f"The STEAM64ID: `{steamid}` is not valid.")
 
         # Close Connection
         dzconn.close()
