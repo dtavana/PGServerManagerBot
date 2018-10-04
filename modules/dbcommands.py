@@ -1,4 +1,4 @@
-# Base Modules for Bot
+#Base Modules for Bot
 import discord
 import asyncio
 import aiomysql
@@ -107,11 +107,10 @@ class DBCommandsCog:
         # Checks to see if user is registered
         if(await DBCommandsCog.validsteamidcheck(self, ctx, player) != True):
             try:
-                newuser = await commands.MemberConverter().convert(ctx, player)
+                player = await commands.MemberConverter().convert(ctx, player)
             except:
                 await ctx.send(f"Invalid value for user: `{player}` (Must be a **Discord User* or a Valid **STEAM64ID**)")
                 dzconn.close()
-                disconn.close()
                 return
             if await DBCommandsCog.check_id(self, player):
                 steamid = await DBCommandsCog.get_steamid(self, player)
@@ -253,11 +252,10 @@ class DBCommandsCog:
         # Checks to see if user is registered
         if(await DBCommandsCog.validsteamidcheck(self, ctx, player) != True):
             try:
-                newuser = await commands.MemberConverter().convert(ctx, player)
+                player = await commands.MemberConverter().convert(ctx, player)
             except:
                 await ctx.send(f"Invalid value for user: `{player}` (Must be a **Discord User* or a Valid **STEAM64ID**)")
                 dzconn.close()
-                disconn.close()
                 return
             if await DBCommandsCog.check_id(self, player):
                 steamid = await DBCommandsCog.get_steamid(self, player)
@@ -395,8 +393,6 @@ class DBCommandsCog:
         # Open Connection
         dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
         dzcur = await dzconn.cursor(aiomysql.DictCursor)
-        disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
-        discur = await disconn.cursor(aiomysql.DictCursor)
 
         if(await DBCommandsCog.validsteamidcheck(self, ctx, player) != True):
             try:
@@ -404,7 +400,6 @@ class DBCommandsCog:
             except:
                 await ctx.send(f"Invalid value for user: `{player}` (Must be a **Discord User* or a Valid **STEAM64ID**)")
                 dzconn.close()
-                disconn.close()
                 return
 
             # Checks to see if user is registered
@@ -449,7 +444,6 @@ class DBCommandsCog:
                     name="Error:", value=f"Invalid STEAM64ID of: {msg.steamid}")
                 await ctx.send(embed=embed)
                 dzconn.close()
-                disconn.close()
                 return
             await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
             bankData = await asyncio.gather(dzcur.fetchone())
@@ -483,10 +477,6 @@ class DBCommandsCog:
     @commands.has_any_role("Owner", "Developer")
     async def customquery(self, ctx, query: str, db: str):
         if db == "dz":
-            # Open Connection
-            dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
-            dzcur = await dzconn.cursor(aiomysql.DictCursor)
-
             await ctx.send("Are you sure you would like to perform the following? If yes, react with a Thumbs Up. Otherwise, reacting with a Thumbs Down")
             embed = discord.Embed(
                 title=f"CustomQueryInfo \U0000270d", colour=discord.Colour(0xFFA500))
@@ -504,9 +494,10 @@ class DBCommandsCog:
             # Check if thumbs up
             if reaction.emoji != "\U0001f44d":
                 await ctx.send("Command Cancelled")
-                dzconn.close()
-                disconn.close()
                 return
+            # Open Connection
+            dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
+            dzcur = await dzconn.cursor(aiomysql.DictCursor)
             await dzcur.execute(query)
             await dzconn.commit()
             result = await asyncio.gather(dzcur.fetchall())
@@ -538,8 +529,6 @@ class DBCommandsCog:
             # Check if thumbs up
             if reaction.emoji != "\U0001f44d":
                 await ctx.send("Command Cancelled")
-                dzconn.close()
-                disconn.close()
                 return
             # Open Connection
             disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
