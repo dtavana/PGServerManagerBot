@@ -14,7 +14,8 @@ extensions = [
     'modules.admin',
     'modules.registration',
     'modules.info',
-    'modules.gambling'
+    'modules.gambling',
+    'modules.servermgmt'
 ]
 
 

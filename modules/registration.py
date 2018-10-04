@@ -69,7 +69,7 @@ class RegistrationCog:
             await channel.send(embed=embed)
 
     # --------------Registration--------------
-    @commands.command()
+    @commands.command(aliases=['register'])
     @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin")
     async def adduser(self, ctx, player: discord.Member):
         try:
@@ -95,7 +95,7 @@ class RegistrationCog:
                     await ctx.send(embed=embed)
                     return
                 steamid = msg.content
-                
+
                 embed = discord.Embed(
                     title=f"ReactToConfirm \U0001f4b1", colour=discord.Colour(0xFFA500))
                 embed.set_footer(text="PGServerManager | TwiSt#2791")
@@ -132,7 +132,6 @@ class RegistrationCog:
                     await ctx.send("An error has occured!")
         except Exception as e:
             await ctx.send(f'```py\n{traceback.format_exc()}\n```')
-        
 
     @commands.command()
     @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin")
@@ -157,7 +156,8 @@ class RegistrationCog:
                     title=f"ReactToConfirm \U0001f4b1", colour=discord.Colour(0xFFA500))
                 embed.set_footer(text="PGServerManager | TwiSt#2791")
                 embed.add_field(name="**User:**", value=f"`{player.mention}`")
-                embed.add_field(name="**New STEAM64ID:**", value=f"`{steamid}`")
+                embed.add_field(name="**New STEAM64ID:**",
+                                value=f"`{steamid}`")
                 message = await ctx.send(embed=embed)
                 await message.add_reaction("\U0001f44d")
                 await message.add_reaction("\U0001f44e")
