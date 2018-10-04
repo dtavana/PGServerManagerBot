@@ -36,8 +36,8 @@ class ServerManagementCog:
         if reaction.emoji != "\U0001f44d":
             await ctx.send("Command cancelled")
             return
-        subprocess.call(
-            ['start C:\\Users\\TwiSt\\Desktop\\Files\\PGServerManagerBot\\forceclosecherno.lnk'])
+        p = subprocess.Popen(
+            'start C:\\Users\\TwiSt\\Desktop\\Files\\PGServerManagerBot\\forceclosecherno.lnk')
 
 
 def setup(bot):
