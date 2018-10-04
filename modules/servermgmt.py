@@ -37,7 +37,7 @@ class ServerManagementCog:
             await ctx.send("Command cancelled")
             return
         subprocess.call(
-            ['cmd', 'start C:\\Users\\TwiSt\\Desktop\\Files\\PGServerManagerBot\\forceclosecherno.lnk'])
+            ['start C:\\Users\\TwiSt\\Desktop\\Files\\PGServerManagerBot\\forceclosecherno.lnk'])
 
 
 def setup(bot):
