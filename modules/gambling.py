@@ -329,6 +329,24 @@ class GamblingCog:
             await ctx.send(f"{ctx.author.mention} needs to bet at least 5000 coins!")
             return
 
+        embed = discord.Embed(
+            title=f"ReactToConfirm \U0001f4b1", colour=discord.Colour(0xFFA500))
+        embed.set_footer(text="PGServerManager | TwiSt#2791")
+        embed.add_field(name="**Bet:**", value=f"`Coins`")
+        embed.add_field(name="**Amount:**", value=f"`{amount}`")
+        message = await ctx.author.send(embed=embed)
+        await message.add_reaction("\U0001f44d")
+        await message.add_reaction("\U0001f44e")
+
+        def reactioncheck(reaction, user):
+            validreactions = ["\U0001f44d", "\U0001f44e"]
+            return user.id == ctx.author.id and reaction.emoji in validreactions
+        reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck)
+        # Check if thumbs up
+        if reaction.emoji != "\U0001f44d":
+            await ctx.send("Command cancelled")
+            return
+        
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
 
@@ -435,13 +453,31 @@ class GamblingCog:
         discur = await disconn.cursor(aiomysql.DictCursor)
 
         if await GamblingCog.check_id(self, ctx.author) and await GamblingCog.check_id(self, user):
+            embed = discord.Embed(
+                title=f"ReactToConfirm \U0001f4b1", colour=discord.Colour(0xFFA500))
+            embed.set_footer(text="PGServerManager | TwiSt#2791")
+            embed.add_field(name="**Transfer:**", value=f"{user.mention}")
+            embed.add_field(name="**Amount:**", value=f"`{amount}`")
+            message = await ctx.send(embed=embed)
+            await message.add_reaction("\U0001f44d")
+            await message.add_reaction("\U0001f44e")
+
+            def reactioncheck(reaction, member):
+                validreactions = ["\U0001f44d", "\U0001f44e"]
+                return member.id == ctx.author.id and reaction.emoji in validreactions
+            reaction, member = await self.bot.wait_for('reaction_add', check=reactioncheck)
+            # Check if thumbs up
+            if reaction.emoji != "\U0001f44d":
+                await ctx.send("Command cancelled")
+                disconn.close()
+                return
             # Get starting values
             await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
             curBalDonator = await asyncio.gather(discur.fetchone())
             curBalDonator = curBalDonator[0]['Balance']
             await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(user),))
             curBalReceiver = await asyncio.gather(discur.fetchone())
-            curBalReceiver = curBalDonator[0]['Balance']
+            curBalReceiver = curBalReceiver[0]['Balance']
             # Check if they have enough
             if(curBalDonator and (curBalDonator >= amount)):
                 # Remove coins
