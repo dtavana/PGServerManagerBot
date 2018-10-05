@@ -344,7 +344,7 @@ class GamblingCog:
         reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck, timeout = 30)
         # Check if thumbs up
         if reaction.emoji != "\U0001f44d":
-            await ctx.send("Command cancelled")
+            await ctx.author.send("Command cancelled")
             return
         
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
@@ -468,7 +468,7 @@ class GamblingCog:
             reaction, member = await self.bot.wait_for('reaction_add', check=reactioncheck, timeout=30)
             # Check if thumbs up
             if reaction.emoji != "\U0001f44d":
-                await ctx.send("Command cancelled")
+                await ctx.author.send("Command cancelled")
                 disconn.close()
                 return
             # Get starting values
