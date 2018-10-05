@@ -129,7 +129,7 @@ class DBCommandsCog:
                     def reactioncheck(reaction, user):
                         validreactions = ["\U0001f44d", "\U0001f44e"]
                         return user.id == ctx.author.id and reaction.emoji in validreactions
-                    reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck)
+                    reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck, timeout=30)
                     # Check if thumbs up
                     if reaction.emoji != "\U0001f44d":
                         await ctx.send("Command cancelled")
@@ -191,7 +191,7 @@ class DBCommandsCog:
                     def reactioncheck(reaction, user):
                         validreactions = ["\U0001f44d", "\U0001f44e"]
                         return user.id == ctx.author.id and reaction.emoji in validreactions
-                    reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck)
+                    reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck, timeout=30)
                     # Check if thumbs up
                     if reaction.emoji != "\U0001f44d":
                         await ctx.send("Command cancelled")
@@ -275,7 +275,7 @@ class DBCommandsCog:
                     def reactioncheck(reaction, user):
                         validreactions = ["\U0001f44d", "\U0001f44e"]
                         return user.id == ctx.author.id and reaction.emoji in validreactions
-                    reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck)
+                    reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck, timeout=30)
                     # Check if thumbs up
                     if reaction.emoji != "\U0001f44d":
                         await ctx.send("Command cancelled")
@@ -337,7 +337,7 @@ class DBCommandsCog:
                     def reactioncheck(reaction, user):
                         validreactions = ["\U0001f44d", "\U0001f44e"]
                         return user.id == ctx.author.id and reaction.emoji in validreactions
-                    reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck)
+                    reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck, timeout=30)
                     # Check if thumbs up
                     if reaction.emoji != "\U0001f44d":
                         await ctx.send("Command cancelled")
@@ -490,7 +490,7 @@ class DBCommandsCog:
             def reactioncheck(reaction, user):
                 validreactions = ["\U0001f44d", "\U0001f44e"]
                 return user.id == ctx.author.id and reaction.emoji in validreactions
-            reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck)
+            reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck, timeout=30)
             # Check if thumbs up
             if reaction.emoji != "\U0001f44d":
                 await ctx.send("Command Cancelled")
@@ -525,7 +525,7 @@ class DBCommandsCog:
             def reactioncheck(reaction, user):
                 validreactions = ["\U0001f44d", "\U0001f44e"]
                 return user.id == ctx.author.id and reaction.emoji in validreactions
-            reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck)
+            reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck, timeout=30)
             # Check if thumbs up
             if reaction.emoji != "\U0001f44d":
                 await ctx.send("Command Cancelled")

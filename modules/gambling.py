@@ -341,7 +341,7 @@ class GamblingCog:
         def reactioncheck(reaction, user):
             validreactions = ["\U0001f44d", "\U0001f44e"]
             return user.id == ctx.author.id and reaction.emoji in validreactions
-        reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck)
+        reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck, timeout = 30)
         # Check if thumbs up
         if reaction.emoji != "\U0001f44d":
             await ctx.send("Command cancelled")
@@ -458,14 +458,14 @@ class GamblingCog:
             embed.set_footer(text="PGServerManager | TwiSt#2791")
             embed.add_field(name="**Transfer:**", value=f"{user.mention}")
             embed.add_field(name="**Amount:**", value=f"`{amount}`")
-            message = await ctx.send(embed=embed)
+            message = await ctx.author.send(embed=embed)
             await message.add_reaction("\U0001f44d")
             await message.add_reaction("\U0001f44e")
 
             def reactioncheck(reaction, member):
                 validreactions = ["\U0001f44d", "\U0001f44e"]
                 return member.id == ctx.author.id and reaction.emoji in validreactions
-            reaction, member = await self.bot.wait_for('reaction_add', check=reactioncheck)
+            reaction, member = await self.bot.wait_for('reaction_add', check=reactioncheck, timeout=30)
             # Check if thumbs up
             if reaction.emoji != "\U0001f44d":
                 await ctx.send("Command cancelled")
