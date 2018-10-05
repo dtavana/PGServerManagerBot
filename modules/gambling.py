@@ -429,6 +429,80 @@ class GamblingCog:
             return
         disconn.close()
 
+    @commands.command(aliases=['wiretransfer'])
+    async def transfer(self, ctx, user: discord.Member, amount: int):
+        disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
+        discur = await disconn.cursor(aiomysql.DictCursor)
+
+        if await GamblingCog.check_id(self, ctx.author) and await GamblingCog.check_id(self, user):
+            # Get starting values
+            await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
+            curBalDonator = await asyncio.gather(discur.fetchone())
+            curBalDonator = curBalDonator[0]['Balance']
+            await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(user),))
+            curBalReceiver = await asyncio.gather(discur.fetchone())
+            curBalReceiver = curBalDonator[0]['Balance']
+            # Check if they have enough
+            if(curBalDonator and (curBalDonator >= amount)):
+                # Remove coins
+                await discur.execute('UPDATE users SET Balance = Balance - %s WHERE DiscordUser = %s;', (amount, str(ctx.author)))
+                await discur.execute('UPDATE users SET Balance = Balance + %s WHERE DiscordUser = %s;', (amount, str(user)))
+                
+                await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
+                newBalDonator = await asyncio.gather(discur.fetchone())
+                newBalDonator = newBalDonator[0]['Balance']
+                await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(user),))
+                newBalReceiver = await asyncio.gather(discur.fetchone())
+                newBalReceiver = newBalReceiver[0]['Balance']
+                
+                if newBalDonator != curBalDonator and newBalReceiver != curBalReceiver:
+                    embed = discord.Embed(
+                        title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
+                    embed.set_footer(text="PGServerManager | TwiSt#2791")
+                    embed.add_field(
+                        name="Data:", value=f"{ctx.author.mention} gave {user.mention} **{amount} Coins**!")
+                    await ctx.send(embed=embed)
+                    #await GamblingCog.gamblelog(self, ctx, amount, "Jackpot")
+                    # Start the countdown with 2 players
+
+                else:
+                    # Coins didn't change
+                    embed = discord.Embed(
+                        title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
+                    embed.set_footer(text="PGServerManager | TwiSt#2791")
+                    embed.add_field(
+                        name="Error:", value=f"{ctx.author.mention}, an error has occured. Please screenshot this and make a ticket")
+                    await ctx.send(embed=embed)
+                    # Close the connections
+                    disconn.close()
+                    return
+            else:
+                # Not enough Coins
+                embed = discord.Embed(
+                    title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
+                embed.set_footer(text="PGServerManager | TwiSt#2791")
+                embed.add_field(
+                    name="Error:", value=f"{ctx.author.mention} does not have enough in their Balance for this transfer!")
+                await ctx.send(embed=embed)
+                # Close the connections
+                disconn.close()
+                return
+        else:
+            # User not registed
+            embed = discord.Embed(
+                title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
+            embed.set_footer(text="PGServerManager | TwiSt#2791")
+            embed.add_field(
+                name="Error:", value=f"The Discord Account {ctx.author.mention} is currently not registered!\n"
+                f"Please make a ticket as follows : `-new registration INSERTSTEAM64ID`", inline=False)
+            await ctx.send(embed=embed)
+            # Close the connections
+            disconn.close()
+            return
+        disconn.close()
+
+
+
 
 def setup(bot):
     bot.add_cog(GamblingCog(bot))
