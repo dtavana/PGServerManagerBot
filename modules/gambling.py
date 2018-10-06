@@ -329,6 +329,7 @@ class GamblingCog:
             await ctx.send(f"{ctx.author.mention} needs to bet at least 5000 coins!")
             return
 
+        '''
         embed = discord.Embed(
             title=f"ReactToConfirm \U0001f4b1", colour=discord.Colour(0xFFA500))
         embed.set_footer(text="PGServerManager | TwiSt#2791")
@@ -346,7 +347,7 @@ class GamblingCog:
         if reaction.emoji != "\U0001f44d":
             await ctx.author.send("Command cancelled")
             return
-        
+        '''
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
 
@@ -453,6 +454,7 @@ class GamblingCog:
         discur = await disconn.cursor(aiomysql.DictCursor)
 
         if await GamblingCog.check_id(self, ctx.author) and await GamblingCog.check_id(self, user):
+            '''
             embed = discord.Embed(
                 title=f"ReactToConfirm \U0001f4b1", colour=discord.Colour(0xFFA500))
             embed.set_footer(text="PGServerManager | TwiSt#2791")
@@ -471,6 +473,7 @@ class GamblingCog:
                 await ctx.author.send("Command cancelled")
                 disconn.close()
                 return
+            '''
             # Get starting values
             await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
             curBalDonator = await asyncio.gather(discur.fetchone())
