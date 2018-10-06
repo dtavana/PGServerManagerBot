@@ -184,7 +184,7 @@ class GamblingCog:
 
             if (amount + curBal > 20000000):
                 # Over Max Balance
-                await ctx.send(f"{ctx.author.mention} can not add {amount} coins it would put their balance of {curBal} over 20000000")
+                await ctx.send(f"{ctx.author.mention} can not add {amount} coins it would put their BankCoins of {curBal} over 20000000")
                 dzconn.close()
                 disconn.close()
                 return
