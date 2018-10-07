@@ -456,8 +456,13 @@ class GamblingCog:
 
     @commands.command(aliases=['wiretransfer'])
     async def transfer(self, ctx, user: discord.Member, amount: int):
+        if ctx.author == user:
+            await ctx.send(f"{ctx.author.mention} can not transfer to themselves")
+            return
+        
         if amount < 1:
             await ctx.send(f"{ctx.author.mention} used an invalid transfer amount of {amount}")
+            return
         
 
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
