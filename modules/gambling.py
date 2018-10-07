@@ -182,12 +182,14 @@ class GamblingCog:
                 disconn.close()
                 return
 
+            '''
             if (amount + curBal > 20000000):
                 # Over Max Balance
-                await ctx.send(f"{ctx.author.mention} can not add {amount} coins it would put their BankCoins of {curBal} over 20000000")
+                await ctx.send(f"{ctx.author.mention} can not add {amount} coins it would put their Balance of {curBal} over 20000000")
                 dzconn.close()
                 disconn.close()
                 return
+            '''
 
             curPlayers = await GamblingCog.currentplayers(self, ctx)
             if (steamid not in curPlayers):
@@ -327,6 +329,10 @@ class GamblingCog:
 
         if amount < 5000:
             await ctx.send(f"{ctx.author.mention} needs to bet at least 5000 coins!")
+            return
+        
+        if amount > 20000000:
+            await ctx.send(f"{ctx.author.mention} can not bet over 20000000 coins!")
             return
 
         '''
