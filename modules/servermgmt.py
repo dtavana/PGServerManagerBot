@@ -17,7 +17,17 @@ class ServerManagementCog:
         self.bot = bot
     
     @commands.command()
-    @commands.has_any_role("Owner", "Developer", "Head Admin", "Super Admin")
+    @commands.has_any_role("Owner", "Developer", "Head Admin", "Super Admin", "Admin")
+    async def viewchernorpt(self, ctx):
+        embed = discord.Embed(
+            title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
+        embed.set_footer(text="PGServerManager | TwiSt#2791")
+        embed.add_field(name=f"Current RPT:", value=f"It is below")
+        await ctx.author.send(embed=embed)
+        await ctx.author.send(file=discord.File("C:\\SERVER#1\\DZE_Server_Config\\arma2oaserver.rpt"))
+    
+    @commands.command()
+    @commands.has_any_role("Owner", "Developer", "Head Admin", "Super Admin", "Admin")
     async def restartcherno(self, ctx):
         embed = discord.Embed(
             title=f"ReactToConfirm \U0001f4b1", colour=discord.Colour(0xFFA500))
