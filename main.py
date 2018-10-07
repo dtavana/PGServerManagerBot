@@ -49,7 +49,7 @@ class PGManager(commands.Bot):
         print(f"Logged in as: {self.user}")
         print(f"Total Servers: {len(self.guilds)}")
         print(f"Total Cogs: {len(self.cogs)}")
-        await self.change_presence(activity=discord.Activity(type=discord.ActivityType.playing, name=f"pg help | {len(self.users)} members"))
+        await self.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=f"pg help | {len(self.users)} members"))
 
         # Error logging
         async def on_command_error(ctx, error):
