@@ -283,14 +283,14 @@ class DBCommandsCog:
                         return
 
                     # Get starting value
-                    await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
+                    await dzcur.execute('SELECT XP FROM player_data WHERE PlayerUID = %s;', (steamid,))
                     original = await asyncio.gather(dzcur.fetchone())
 
                     # Perform the query
-                    await dzcur.execute('UPDATE xpsystem SET XP = XP + %s WHERE PlayerUID = %s;', (amount, steamid))
+                    await dzcur.execute('UPDATE player_data SET XP = XP + %s WHERE PlayerUID = %s;', (amount, steamid))
 
                     # Check if it actually changed
-                    await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
+                    await dzcur.execute('SELECT XP FROM player_data WHERE PlayerUID = %s;', (steamid,))
                     new = await asyncio.gather(dzcur.fetchone())
                     if(new == original):
                         await ctx.send("An error has occured! Nothing has been changed. Please fix your syntax")
@@ -345,14 +345,14 @@ class DBCommandsCog:
                         return
 
                     # Get starting value
-                    await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
+                    await dzcur.execute('SELECT XP FROM player_data WHERE PlayerUID = %s;', (steamid,))
                     original = await asyncio.gather(dzcur.fetchone())
 
                     # Perform the query
-                    await dzcur.execute('UPDATE xpsystem SET XP = XP + %s WHERE PlayerUID = %s;', (amount, steamid))
+                    await dzcur.execute('UPDATE player_data SET XP = XP + %s WHERE PlayerUID = %s;', (amount, steamid))
 
                     # Check if it actually changed
-                    await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
+                    await dzcur.execute('SELECT XP FROM player_data WHERE PlayerUID = %s;', (steamid,))
                     new = await asyncio.gather(dzcur.fetchone())
                     if(new == original):
                         await ctx.send("An error has occured! Nothing has been changed. Please fix your syntax")
@@ -408,7 +408,7 @@ class DBCommandsCog:
                 # Get the data
                 await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
                 bankData = await asyncio.gather(dzcur.fetchone())
-                await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
+                await dzcur.execute('SELECT XP FROM player_data WHERE PlayerUID = %s;', (steamid,))
                 xpData = await asyncio.gather(dzcur.fetchone())
                 await dzcur.execute('SELECT Humanity FROM character_data WHERE PlayerUID = %s;', (steamid,))
                 humData = await asyncio.gather(dzcur.fetchone())
@@ -447,7 +447,7 @@ class DBCommandsCog:
                 return
             await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
             bankData = await asyncio.gather(dzcur.fetchone())
-            await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
+            await dzcur.execute('SELECT XP FROM player_data WHERE PlayerUID = %s;', (steamid,))
             xpData = await asyncio.gather(dzcur.fetchone())
             await dzcur.execute('SELECT Humanity FROM character_data WHERE PlayerUID = %s;', (steamid,))
             humData = await asyncio.gather(dzcur.fetchone())
@@ -557,7 +557,7 @@ class DBCommandsCog:
             # Get the data
             await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
             bankData = await asyncio.gather(dzcur.fetchone())
-            await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
+            await dzcur.execute('SELECT XP FROM player_data WHERE PlayerUID = %s;', (steamid,))
             xpData = await asyncio.gather(dzcur.fetchone())
             await dzcur.execute('SELECT Humanity FROM character_data WHERE PlayerUID = %s;', (steamid,))
             humData = await asyncio.gather(dzcur.fetchone())
