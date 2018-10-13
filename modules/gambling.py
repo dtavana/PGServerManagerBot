@@ -182,12 +182,14 @@ class GamblingCog:
                 disconn.close()
                 return
 
+            '''
             if (amount + curBal > 20000000):
                 # Over Max Balance
-                await ctx.send(f"{ctx.author.mention} can not add {amount} coins it would put their BankCoins of {curBal} over 20000000")
+                await ctx.send(f"{ctx.author.mention} can not add {amount} coins it would put their Balance of {curBal} over 20000000")
                 dzconn.close()
                 disconn.close()
                 return
+            '''
 
             curPlayers = await GamblingCog.currentplayers(self, ctx)
             if (steamid not in curPlayers):
@@ -328,6 +330,10 @@ class GamblingCog:
         if amount < 5000:
             await ctx.send(f"{ctx.author.mention} needs to bet at least 5000 coins!")
             return
+        
+        if amount > 20000000:
+            await ctx.send(f"{ctx.author.mention} can not bet over 20000000 coins!")
+            return
 
         '''
         embed = discord.Embed(
@@ -450,8 +456,13 @@ class GamblingCog:
 
     @commands.command(aliases=['wiretransfer'])
     async def transfer(self, ctx, user: discord.Member, amount: int):
+        if ctx.author == user:
+            await ctx.send(f"{ctx.author.mention} can not transfer to themselves")
+            return
+        
         if amount < 1:
             await ctx.send(f"{ctx.author.mention} used an invalid transfer amount of {amount}")
+            return
         
 
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
