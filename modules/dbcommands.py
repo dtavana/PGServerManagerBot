@@ -557,7 +557,7 @@ class DBCommandsCog:
             # Get the data
             await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
             bankData = await asyncio.gather(dzcur.fetchone())
-            await dzcur.execute('SELECT XP FROM player_data WHERE PlayerUID = %s;', (steamid,))
+            await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
             xpData = await asyncio.gather(dzcur.fetchone())
             await dzcur.execute('SELECT Humanity FROM character_data WHERE PlayerUID = %s;', (steamid,))
             humData = await asyncio.gather(dzcur.fetchone())
