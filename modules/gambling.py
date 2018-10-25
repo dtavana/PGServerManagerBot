@@ -321,6 +321,9 @@ class GamblingCog:
 
     @commands.command(aliases=['bet'])
     async def jackpot(self, ctx, amount: int):
+        disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
+        discur = await disconn.cursor(aiomysql.DictCursor)
+        
         jackpotchanid = 492488744440561674
         channel = self.bot.get_channel(jackpotchanid)
         if (ctx.channel != channel):
@@ -331,31 +334,16 @@ class GamblingCog:
             await ctx.send(f"{ctx.author.mention} needs to bet at least 5000 coins!")
             return
         
-        if amount > 20000000:
-            await ctx.send(f"{ctx.author.mention} can not bet over 20000000 coins!")
-            return
+        await discur.execute('SELECT Amount FROM jackpot WHERE DiscordUser = %s;', (str(ctx.author)))
+        curBets = await asyncio.gather(discur.fetchall())
+        curTotal = 0
+        for x in curBets[0]:
+            # Get the players true total
+            curTotal += x['Amount']
 
-        '''
-        embed = discord.Embed(
-            title=f"ReactToConfirm \U0001f4b1", colour=discord.Colour(0xFFA500))
-        embed.set_footer(text="PGServerManager | TwiSt#2791")
-        embed.add_field(name="**Bet:**", value=f"`Coins`")
-        embed.add_field(name="**Amount:**", value=f"`{amount}`")
-        message = await ctx.author.send(embed=embed)
-        await message.add_reaction("\U0001f44d")
-        await message.add_reaction("\U0001f44e")
-
-        def reactioncheck(reaction, user):
-            validreactions = ["\U0001f44d", "\U0001f44e"]
-            return user.id == ctx.author.id and reaction.emoji in validreactions
-        reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck, timeout = 30)
-        # Check if thumbs up
-        if reaction.emoji != "\U0001f44d":
-            await ctx.author.send("Command cancelled")
+        if(amount + curTotal) > 10000000:
+            await ctx.send(f"{ctx.author.mention} can not bet over 10000000 coins in one pot!")
             return
-        '''
-        disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
-        discur = await disconn.cursor(aiomysql.DictCursor)
 
         if await GamblingCog.check_id(self, ctx.author):
             steamid = await GamblingCog.get_steamid(self, ctx.author)
