@@ -8,6 +8,7 @@ import traceback
 #Misc. Modules
 import datetime
 import config as cfg
+import typing
 
 
 class GamblingCog:
@@ -158,7 +159,7 @@ class GamblingCog:
         disconn.close()
 
     @commands.command()
-    async def deposit(self, ctx, amount: int):
+    async def deposit(self, ctx, amount: typing.Union[int, str]):
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
         dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
@@ -174,6 +175,9 @@ class GamblingCog:
             await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
             original = await asyncio.gather(dzcur.fetchone())
             origCoins = original[0]['BankCoins']
+
+            if (amount == "all"):
+                amount = origCoins
 
             if (amount > origCoins):
                 # Check if they have enough
@@ -247,7 +251,7 @@ class GamblingCog:
             return
 
     @commands.command(aliases=['claim'])
-    async def withdraw(self, ctx, amount: int):
+    async def withdraw(self, ctx, amount: typing.Union[int, str]):
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
         dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
@@ -260,17 +264,19 @@ class GamblingCog:
                 await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
                 curBal = await asyncio.gather(discur.fetchone())
                 curBal = curBal[0]['Balance']
+                await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
+                original = await asyncio.gather(dzcur.fetchone())
+                origCoins = original[0]['BankCoins']
 
+                if (amount == "all"):
+                   amount = curBal
+                
                 if (amount > curBal):
                     await ctx.send(f"{ctx.author.mention} can not withdraw {amount} coins as it is over their current balance of {curBal}")
                     dzconn.close()
                     disconn.close()
                     return
-
-                # Get starting value
-                await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
-                original = await asyncio.gather(dzcur.fetchone())
-                origCoins = original[0]['BankCoins']
+                
 
                 if (origCoins + amount > 20000000):
                     await ctx.send(f"{ctx.author.mention} can not claim {amount} coins as it will put their bank over 20,000,000")
@@ -328,10 +334,12 @@ class GamblingCog:
         channel = self.bot.get_channel(jackpotchanid)
         if (ctx.channel != channel):
             await ctx.send(f"Please run this in <#{jackpotchanid}>")
+            disconn.close()
             return
 
         if amount < 5000:
             await ctx.send(f"{ctx.author.mention} needs to bet at least 5000 coins!")
+            disconn.close()
             return
         
         await discur.execute('SELECT Amount FROM jackpot WHERE DiscordUser = %s;', (str(ctx.author)))
@@ -343,6 +351,7 @@ class GamblingCog:
 
         if(amount + curTotal) > 10000000:
             await ctx.send(f"{ctx.author.mention} can not bet over 10000000 coins in one pot!")
+            disconn.close()
             return
 
         if await GamblingCog.check_id(self, ctx.author):
