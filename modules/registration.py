@@ -69,6 +69,25 @@ class RegistrationCog:
             await channel.send(embed=embed)
 
     # --------------Registration--------------
+    @commands.command()
+    async def fix(self, ctx):
+        try:
+            if(await RegistrationCog.check_id(self, ctx.author)):
+                disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
+                discur = await disconn.cursor(aiomysql.DictCursor)
+                await discur.execute('SELECT DiscordID FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
+                result = await asyncio.gather(discur.fetchone())
+                if result[0]['DiscordID'] == "0":
+                    await discur.execute('UPDATE users SET DiscordID = %s WHERE DiscordUser = %s;', (str(ctx.author.id), str(ctx.author)))
+                    await ctx.send(f"{ctx.author.mention} the command was succesful")
+                else:
+                    await ctx.send(f"The DiscordUser: {ctx.author.mention} already ran the command!")
+            else:
+                await ctx.send(f"The DiscordUser: {ctx.author.mention} is not registered.")
+        except:
+            await ctx.send(f"{ctx.author.mention}, an error has occured")
+        disconn.close()
+    
     @commands.command(aliases=['register'])
     @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin")
     async def adduser(self, ctx, player: discord.Member):

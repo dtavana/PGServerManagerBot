@@ -8,6 +8,7 @@ import traceback
 #Misc. Modules
 import datetime
 import config as cfg
+import typing
 
 
 class GamblingCog:
@@ -48,6 +49,26 @@ class GamblingCog:
             if i['attributes']['type'] == "steamID":
                 players.append(i['attributes']['identifier'])
         return players
+
+    async def unlimitedbank(self, ctx, steamid):
+        try:
+            dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
+            dzcur = await dzconn.cursor(aiomysql.DictCursor)
+            await dzcur.execute('SELECT Perks FROM xpsystem WHERE PlayerUID = %s', (steamid,))
+            result = await asyncio.gather(dzcur.fetchone())
+            result = result[0]['Perks']
+            result = result[1:-1]
+            result = result.split(',')
+            if ("'UnlimitedBank'" in result):
+                return True
+            else:
+                return False
+            
+        except Exception as e:
+            await ctx.send(f'```py\n{traceback.format_exc()}\n```')
+            await ctx.send(e)
+            return False
+        dzconn.close()
 
     async def check_id(self, user: discord.Member):
         # Open Connection
@@ -158,7 +179,7 @@ class GamblingCog:
         disconn.close()
 
     @commands.command()
-    async def deposit(self, ctx, amount: int):
+    async def deposit(self, ctx, amount: typing.Union[int, str]):
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
         dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
@@ -174,6 +195,9 @@ class GamblingCog:
             await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
             original = await asyncio.gather(dzcur.fetchone())
             origCoins = original[0]['BankCoins']
+
+            if (amount == "all"):
+                amount = origCoins
 
             if (amount > origCoins):
                 # Check if they have enough
@@ -247,7 +271,7 @@ class GamblingCog:
             return
 
     @commands.command(aliases=['claim'])
-    async def withdraw(self, ctx, amount: int):
+    async def withdraw(self, ctx, amount: typing.Union[int, str]):
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
         dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
@@ -260,6 +284,18 @@ class GamblingCog:
                 await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
                 curBal = await asyncio.gather(discur.fetchone())
                 curBal = curBal[0]['Balance']
+                await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
+                original = await asyncio.gather(dzcur.fetchone())
+                origCoins = original[0]['BankCoins']
+
+                if (curBal == 0):
+                    await ctx.send(f"{ctx.author.mention}'s current balance is 0!")
+                    disconn.close()
+                    dzconn.close()
+                    return
+                
+                if (amount == "all"):
+                    amount = curBal
 
                 if (amount > curBal):
                     await ctx.send(f"{ctx.author.mention} can not withdraw {amount} coins as it is over their current balance of {curBal}")
@@ -267,17 +303,14 @@ class GamblingCog:
                     disconn.close()
                     return
 
-                # Get starting value
-                await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
-                original = await asyncio.gather(dzcur.fetchone())
-                origCoins = original[0]['BankCoins']
-
-                if (origCoins + amount > 20000000):
-                    await ctx.send(f"{ctx.author.mention} can not claim {amount} coins as it will put their bank over 20,000,000")
-                    await ctx.send(f"{ctx.author.mention}'s current BankCoins is {origCoins}")
-                    dzconn.close()
-                    disconn.close()
-                    return
+                result = await GamblingCog.unlimitedbank(self, ctx, steamid)
+                if (result != True):
+                    if (origCoins + amount > 20000000):
+                        await ctx.send(f"{ctx.author.mention} can not claim {amount} coins as it will put their bank over 20,000,000")
+                        await ctx.send(f"{ctx.author.mention}'s current BankCoins is {origCoins}")
+                        dzconn.close()
+                        disconn.close()
+                        return
 
                 # Perform the query
                 await dzcur.execute('UPDATE player_data SET BankCoins = BankCoins + %s WHERE PlayerUID = %s;', (amount, steamid))
@@ -285,7 +318,6 @@ class GamblingCog:
                 # Check if it actually changed
                 await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
                 new = await asyncio.gather(dzcur.fetchone())
-
                 if (new == original):
                     await ctx.send("An error has occured and you have not lost any coins")
                 else:
@@ -321,41 +353,32 @@ class GamblingCog:
 
     @commands.command(aliases=['bet'])
     async def jackpot(self, ctx, amount: int):
+        disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
+        discur = await disconn.cursor(aiomysql.DictCursor)
+
         jackpotchanid = 492488744440561674
         channel = self.bot.get_channel(jackpotchanid)
         if (ctx.channel != channel):
             await ctx.send(f"Please run this in <#{jackpotchanid}>")
+            disconn.close()
             return
 
         if amount < 5000:
             await ctx.send(f"{ctx.author.mention} needs to bet at least 5000 coins!")
-            return
-        
-        if amount > 20000000:
-            await ctx.send(f"{ctx.author.mention} can not bet over 20000000 coins!")
+            disconn.close()
             return
 
-        '''
-        embed = discord.Embed(
-            title=f"ReactToConfirm \U0001f4b1", colour=discord.Colour(0xFFA500))
-        embed.set_footer(text="PGServerManager | TwiSt#2791")
-        embed.add_field(name="**Bet:**", value=f"`Coins`")
-        embed.add_field(name="**Amount:**", value=f"`{amount}`")
-        message = await ctx.author.send(embed=embed)
-        await message.add_reaction("\U0001f44d")
-        await message.add_reaction("\U0001f44e")
+        await discur.execute('SELECT Amount FROM jackpot WHERE DiscordUser = %s;', (str(ctx.author)))
+        curBets = await asyncio.gather(discur.fetchall())
+        curTotal = 0
+        for x in curBets[0]:
+            # Get the players true total
+            curTotal += x['Amount']
 
-        def reactioncheck(reaction, user):
-            validreactions = ["\U0001f44d", "\U0001f44e"]
-            return user.id == ctx.author.id and reaction.emoji in validreactions
-        reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck, timeout = 30)
-        # Check if thumbs up
-        if reaction.emoji != "\U0001f44d":
-            await ctx.author.send("Command cancelled")
+        if(amount + curTotal) > 10000000:
+            await ctx.send(f"{ctx.author.mention} can not bet over 10000000 coins in one pot!")
+            disconn.close()
             return
-        '''
-        disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
-        discur = await disconn.cursor(aiomysql.DictCursor)
 
         if await GamblingCog.check_id(self, ctx.author):
             steamid = await GamblingCog.get_steamid(self, ctx.author)
@@ -459,11 +482,10 @@ class GamblingCog:
         if ctx.author == user:
             await ctx.send(f"{ctx.author.mention} can not transfer to themselves")
             return
-        
+
         if amount < 1:
             await ctx.send(f"{ctx.author.mention} used an invalid transfer amount of {amount}")
             return
-        
 
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
@@ -501,14 +523,14 @@ class GamblingCog:
                 # Remove coins
                 await discur.execute('UPDATE users SET Balance = Balance - %s WHERE DiscordUser = %s;', (amount, str(ctx.author)))
                 await discur.execute('UPDATE users SET Balance = Balance + %s WHERE DiscordUser = %s;', (amount, str(user)))
-                
+
                 await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
                 newBalDonator = await asyncio.gather(discur.fetchone())
                 newBalDonator = newBalDonator[0]['Balance']
                 await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(user),))
                 newBalReceiver = await asyncio.gather(discur.fetchone())
                 newBalReceiver = newBalReceiver[0]['Balance']
-                
+
                 if newBalDonator != curBalDonator and newBalReceiver != curBalReceiver:
                     embed = discord.Embed(
                         title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
@@ -516,7 +538,7 @@ class GamblingCog:
                     embed.add_field(
                         name="Data:", value=f"{ctx.author.mention} gave {user.mention} **{amount} Coins**!")
                     await ctx.send(embed=embed)
-                    #await GamblingCog.gamblelog(self, ctx, amount, "Jackpot")
+                    # await GamblingCog.gamblelog(self, ctx, amount, "Jackpot")
                     # Start the countdown with 2 players
 
                 else:
@@ -554,8 +576,6 @@ class GamblingCog:
             disconn.close()
             return
         disconn.close()
-
-
 
 
 def setup(bot):
