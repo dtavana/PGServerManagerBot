@@ -136,7 +136,7 @@ class RegistrationCog:
                 # Open Connection
                 disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
                 discur = await disconn.cursor(aiomysql.DictCursor)
-                await discur.execute('INSERT INTO users (DiscordUser, PlayerUID) VALUES (%s,%s);', (str(player), steamid))
+                await discur.execute('INSERT INTO users (DiscordUser, PlayerUID, DiscordID) VALUES (%s,%s,%s);', (str(player), steamid, player.id))
                 disconn.close()
                 if await RegistrationCog.check_id(self, player):
                     embed = discord.Embed(
