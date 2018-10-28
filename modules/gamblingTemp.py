@@ -397,8 +397,10 @@ class GamblingCog:
             curBal = await asyncio.gather(discur.fetchone())
             curBal = curBal[0]['Balance']
             # Check if they have enough
-            if((curBal >= maxBet) and (amount == "max")):
+            if(amount == "max"):
                 amount = maxBet
+                if curBal < amount:
+                    amount = curBal
             if(curBal and (curBal >= amount)):
                 # Check if another user has gone in before going in again
                 await discur.execute('SELECT * FROM jackpot')
