@@ -352,7 +352,7 @@ class GamblingCog:
         dzconn.close()
 
     @commands.command(aliases=['bet'])
-    async def jackpot(self, ctx, amount: int):
+    async def jackpot(self, ctx, amount: typing.Union[int, str]):
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
 
@@ -363,22 +363,31 @@ class GamblingCog:
             disconn.close()
             return
 
-        if amount < 5000:
-            await ctx.send(f"{ctx.author.mention} needs to bet at least 5000 coins!")
-            disconn.close()
-            return
-
         await discur.execute('SELECT Amount FROM jackpot WHERE DiscordUser = %s;', (str(ctx.author)))
         curBets = await asyncio.gather(discur.fetchall())
         curTotal = 0
         for x in curBets[0]:
             # Get the players true total
             curTotal += x['Amount']
+        
+        maxBet = 10000000 - curTotal
 
-        if(amount + curTotal) > 10000000:
-            await ctx.send(f"{ctx.author.mention} can not bet over 10000000 coins in one pot!")
+        if maxBet == 0:
+            await ctx.send(f"{ctx.author.mention} can not bet anymore!")
             disconn.close()
             return
+        
+        if(type(amount) is int):
+            if (amount < 5000):
+                await ctx.send(f"{ctx.author.mention} needs to bet at least 5000 coins!")
+                disconn.close()
+                return
+
+            if(amount > maxBet):
+                await ctx.send(f"{ctx.author.mention} can not bet over 10000000 coins in one pot!")
+                disconn.close()
+                return
+        
 
         if await GamblingCog.check_id(self, ctx.author):
             steamid = await GamblingCog.get_steamid(self, ctx.author)
@@ -387,6 +396,10 @@ class GamblingCog:
             curBal = await asyncio.gather(discur.fetchone())
             curBal = curBal[0]['Balance']
             # Check if they have enough
+            if(amount == "max"):
+                amount = maxBet
+                if(curBal < amount):
+                    amount = curBal
             if(curBal and (curBal >= amount)):
                 # Check if another user has gone in before going in again
                 await discur.execute('SELECT * FROM jackpot')
