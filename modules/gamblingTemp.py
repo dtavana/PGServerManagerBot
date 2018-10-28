@@ -357,6 +357,7 @@ class GamblingCog:
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
 
+        await ctx.send(type(amount))
         jackpotchanid = 492488744440561674
         channel = self.bot.get_channel(jackpotchanid)
         if (ctx.channel != channel):
@@ -372,7 +373,6 @@ class GamblingCog:
             curTotal += x['Amount']
         
         maxBet = 10000000 - curTotal
-        
         
         if ((amount < 5000) and (type(amount) is int)):
             await ctx.send(f"{ctx.author.mention} needs to bet at least 5000 coins!")
