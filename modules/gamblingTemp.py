@@ -374,15 +374,16 @@ class GamblingCog:
         
         maxBet = 10000000 - curTotal
         
-        if ((amount < 5000) and (type(amount) is int)):
-            await ctx.send(f"{ctx.author.mention} needs to bet at least 5000 coins!")
-            disconn.close()
-            return
+        if(type(amount) is int):
+            if (amount < 5000):
+                await ctx.send(f"{ctx.author.mention} needs to bet at least 5000 coins!")
+                disconn.close()
+                return
 
-        if((amount > maxBet) and (type(amount) is int)):
-            await ctx.send(f"{ctx.author.mention} can not bet over 10000000 coins in one pot!")
-            disconn.close()
-            return
+            if(amount > maxBet):
+                await ctx.send(f"{ctx.author.mention} can not bet over 10000000 coins in one pot!")
+                disconn.close()
+                return
         
 
         if await GamblingCog.check_id(self, ctx.author):
