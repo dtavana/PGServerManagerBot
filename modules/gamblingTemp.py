@@ -352,6 +352,7 @@ class GamblingCog:
         dzconn.close()
 
     @commands.command(aliases=['bet'])
+    @commands.has_any_role("Owner", "Manager", "Developer", "Head Admin", "Super Admin", "Admin", "Moderator")
     async def jackpot(self, ctx, amount: typing.Union[int, str]):
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
@@ -370,19 +371,19 @@ class GamblingCog:
             # Get the players true total
             curTotal += x['Amount']
         
-        if amount == "max":
-            amount = 10000000 - curTotal
+        maxBet = 10000000 - curTotal
         
-        else:
-            if amount < 5000:
-                await ctx.send(f"{ctx.author.mention} needs to bet at least 5000 coins!")
-                disconn.close()
-                return
+        
+        if ((amount < 5000) and type(amount == int)):
+            await ctx.send(f"{ctx.author.mention} needs to bet at least 5000 coins!")
+            disconn.close()
+            return
 
-        if(amount + curTotal) > 10000000:
+        if((amount > maxBet) and type(amount == int)):
             await ctx.send(f"{ctx.author.mention} can not bet over 10000000 coins in one pot!")
             disconn.close()
             return
+        
 
         if await GamblingCog.check_id(self, ctx.author):
             steamid = await GamblingCog.get_steamid(self, ctx.author)
@@ -391,6 +392,8 @@ class GamblingCog:
             curBal = await asyncio.gather(discur.fetchone())
             curBal = curBal[0]['Balance']
             # Check if they have enough
+            if((curBal >= maxBet) and (amount == "max")):
+                amount = maxBet
             if(curBal and (curBal >= amount)):
                 # Check if another user has gone in before going in again
                 await discur.execute('SELECT * FROM jackpot')
