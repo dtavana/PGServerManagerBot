@@ -422,6 +422,7 @@ class DBCommandsCog:
                     xpData = xpData[0]['XP']
                     humData = humData[0]['Humanity']
 
+                
                 embed = discord.Embed(
                     title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
                 embed.set_footer(text="PGServerManager | TwiSt#2791")
