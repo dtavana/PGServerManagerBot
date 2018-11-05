@@ -24,7 +24,7 @@ class ServerManagementCog:
         embed.set_footer(text="PGServerManager | TwiSt#2791")
         embed.add_field(name=f"Current RPT:", value=f"It is below")
         await ctx.author.send(embed=embed)
-        await ctx.author.send(file=discord.File("C:\\SERVER#1\\DZE_Server_Config\\arma2oaserver.rpt"))
+        await ctx.author.send(file=discord.File("C:\\Cherno_Main\\DZE_Server_Config\\arma2oaserver.rpt"))
     
     @commands.command()
     @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin", "Admin")
