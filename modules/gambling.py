@@ -415,10 +415,12 @@ class GamblingCog:
         
         maxBet = 10000000 - curTotal
 
-        if maxBet == 0:
+        '''
+		if maxBet == 0:
             await ctx.send(f"{ctx.author.mention} can not bet anymore!")
             disconn.close()
             return
+		'''
         
         if(type(amount) is int):
             if (amount < 5000):
