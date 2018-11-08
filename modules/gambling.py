@@ -98,6 +98,45 @@ class GamblingCog:
         return realsteamid
 
     # ---------Misc--------
+    async def calcCurPercentages(self, ctx):
+        try:
+            disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
+            discur = await disconn.cursor(aiomysql.DictCursor)
+
+            curBets = {}
+            curTotal = 0
+            await discur.execute('SELECT DiscordUser, Amount FROM jackpot')
+            curPot = await asyncio.gather(discur.fetchall())
+            for x in curPot[0]:
+                curTotal += x['Amount']
+                if x['DiscordUser'] not in curBets:
+                    curBets[x['DiscordUser']] = x['Amount']
+                else:
+                    curBets[x['DiscordUser']] += x['Amount']
+            curBetsSorted = sorted(curBets, key=curBets.get, reverse=True)
+            curBetPercentages = {}
+            for i in curBetsSorted:
+                curBetPercentages[i] = "{0:.2f}".format(100 * (float(curBets[i]) / float(curTotal)))
+            data = ""
+            
+            for key, value in curBetPercentages.items():
+                data += (f"{(discord.utils.find(lambda m: str(m) == key, ctx.guild.members)).mention} |  **{value}%**\n")
+            
+            embed = discord.Embed(
+                title=f"Current Bets \U0001f911", colour=discord.Colour(0xFF00FF))
+            embed.set_footer(text="PGServerManager | TwiSt#2791")
+            embed.add_field(name=f"Data:",
+                            value=data, inline=False)
+            await ctx.send(embed=embed)
+        except:
+            await ctx.send("Calculations have failed. Report this to TwiSt")
+        finally:
+            disconn.close()
+
+
+
+
+    
     async def startcountdown(self, ctx):
         import random
 
@@ -107,12 +146,16 @@ class GamblingCog:
         await ctx.send("Countdown for the jackpot has started!")
         await asyncio.sleep(15)
         await ctx.send("45 seconds left to join the pot!")
+        await GamblingCog.calcCurPercentages(self, ctx)
         await asyncio.sleep(15)
         await ctx.send("30 seconds left to join the pot!")
+        await GamblingCog.calcCurPercentages(self, ctx)
         await asyncio.sleep(15)
         await ctx.send("15 seconds left to join the pot!")
+        await GamblingCog.calcCurPercentages(self, ctx)
         await asyncio.sleep(10)
         await ctx.send("5 seconds left to join the pot!")
+        await GamblingCog.calcCurPercentages(self, ctx)
         await asyncio.sleep(5)
 
         self.openpot = False
