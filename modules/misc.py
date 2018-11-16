@@ -287,7 +287,8 @@ class MiscCog:
                   if count == 4:
                         await ctx.send(result)
                         result = ""
-                  await ctx.send(result)
+                  elif count == 9:
+                        await ctx.send(result)
 
 
 def setup(bot):
