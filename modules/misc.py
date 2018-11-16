@@ -10,6 +10,7 @@ import datetime
 import config as cfg
 import os
 import subprocess
+import typing
 
 
 class MiscCog:
@@ -257,33 +258,36 @@ class MiscCog:
     
     @commands.command()
     @commands.has_any_role("Owner", "Manager", "Developer", "Head Admin", "Super Admin", "Emoji Memer")
-    async def beerememe(self, ctx, emoji1, emoji2, text: str):
+    async def beerememe(self, ctx, emoji1: typing.Union[discord.Member, str], emoji2: typing.Union[discord.Member, str], text: str):
         
-        if not(text.isalpha()):
+      if not(text.isalpha()):
             await ctx.send(f"Invalid input of {text} (Only letters)")
             return
-        text = text.upper()
-        for curChar in text:
+      if isinstance(emoji1, discord.Member) or isinstance(emoji2, discord.Member):
+            await ctx.send(f"No tagging people nonce")
+            return
+      text = text.upper()
+      for curChar in text:
             pattern = MiscCog.getPattern(curChar, emoji1, emoji2)
             result = ""
             count = 0
             for line in pattern:
-                curLine = ""
-                for emoji in line:
-                    curEmoji = emoji[0]
-                    if len(emoji) == 2:
-                        amount = emoji[1]
-                        for i in range(0, amount):
-                            curLine += curEmoji
-                    else:
-                        curLine += curEmoji
-                count += 1
-                curLine += "\n" 
-                result += curLine
-                if count == 4:
-                    await ctx.send(result)
-                    result = ""
-            await ctx.send(result)
+                  curLine = ""
+                  for emoji in line:
+                        curEmoji = emoji[0]
+                        if len(emoji) == 2:
+                              amount = emoji[1]
+                              for i in range(0, amount):
+                                    curLine += curEmoji
+                        else:
+                              curLine += curEmoji
+                  count += 1
+                  curLine += "\n" 
+                  result += curLine
+                  if count == 4:
+                        await ctx.send(result)
+                        result = ""
+                  await ctx.send(result)
 
 
 def setup(bot):
