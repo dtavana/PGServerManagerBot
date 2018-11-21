@@ -1,4 +1,4 @@
-#Base Modules for Bot
+# Base Modules for Bot
 import discord
 import asyncio
 import aiomysql
@@ -121,7 +121,8 @@ class DBCommandsCog:
                     embed.set_footer(text="PGServerManager | TwiSt#2791")
                     embed.add_field(name="**Type:**", value=f"`Coins`")
                     embed.add_field(name="**Amount:**", value=f"`{amount}`")
-                    embed.add_field(name="**STEAM64ID:**", value=f"`{steamid}`")
+                    embed.add_field(name="**STEAM64ID:**",
+                                    value=f"`{steamid}`")
                     message = await ctx.send(embed=embed)
                     await message.add_reaction("\U0001f44d")
                     await message.add_reaction("\U0001f44e")
@@ -235,7 +236,6 @@ class DBCommandsCog:
             else:
                 await ctx.send(f"The STEAM64ID: `{steamid}` is not valid.")
 
-
         # Close Connection
         dzconn.close()
 
@@ -283,14 +283,14 @@ class DBCommandsCog:
                         return
 
                     # Get starting value
-                    await dzcur.execute('SELECT XP FROM player_data WHERE PlayerUID = %s;', (steamid,))
+                    await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
                     original = await asyncio.gather(dzcur.fetchone())
 
                     # Perform the query
-                    await dzcur.execute('UPDATE player_data SET XP = XP + %s WHERE PlayerUID = %s;', (amount, steamid))
+                    await dzcur.execute('UPDATE xpsystem SET XP = XP + %s WHERE PlayerUID = %s;', (amount, steamid))
 
                     # Check if it actually changed
-                    await dzcur.execute('SELECT XP FROM player_data WHERE PlayerUID = %s;', (steamid,))
+                    await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
                     new = await asyncio.gather(dzcur.fetchone())
                     if(new == original):
                         await ctx.send("An error has occured! Nothing has been changed. Please fix your syntax")
@@ -345,14 +345,14 @@ class DBCommandsCog:
                         return
 
                     # Get starting value
-                    await dzcur.execute('SELECT XP FROM player_data WHERE PlayerUID = %s;', (steamid,))
+                    await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
                     original = await asyncio.gather(dzcur.fetchone())
 
                     # Perform the query
-                    await dzcur.execute('UPDATE player_data SET XP = XP + %s WHERE PlayerUID = %s;', (amount, steamid))
+                    await dzcur.execute('UPDATE xpsystem SET XP = XP + %s WHERE PlayerUID = %s;', (amount, steamid))
 
                     # Check if it actually changed
-                    await dzcur.execute('SELECT XP FROM player_data WHERE PlayerUID = %s;', (steamid,))
+                    await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
                     new = await asyncio.gather(dzcur.fetchone())
                     if(new == original):
                         await ctx.send("An error has occured! Nothing has been changed. Please fix your syntax")
@@ -422,7 +422,6 @@ class DBCommandsCog:
                     xpData = xpData[0]['XP']
                     humData = humData[0]['Humanity']
 
-                
                 embed = discord.Embed(
                     title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
                 embed.set_footer(text="PGServerManager | TwiSt#2791")
@@ -580,7 +579,7 @@ class DBCommandsCog:
             await ctx.author.send(embed=embed)
             dzconn.close()
             disconn.close()
-    
+
     '''
     @commands.command()
     @commands.has_any_role("Owner","Developer")
@@ -637,7 +636,7 @@ class DBCommandsCog:
             disconn.close()
             await ctx.send(f"{e}")
             print("closed")
-'''           
+'''
 
 
 def setup(bot):
