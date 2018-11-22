@@ -68,13 +68,8 @@ class GamblingCog:
             elif ("'BankLimit10M'" in result):
                 return 2
             else:
-<<<<<<< HEAD
                 return 0
-            
-=======
-                return False
 
->>>>>>> 5a5433f8f1598ef12c8269396a23a530de03f8fb
         except Exception as e:
             await ctx.send(f'```py\n{traceback.format_exc()}\n```')
             await ctx.send(e)
