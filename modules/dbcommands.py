@@ -39,7 +39,7 @@ class DBCommandsCog:
         discur = await disconn.cursor(aiomysql.DictCursor)
 
         # Check if ID exists
-        await discur.execute('SELECT PlayerUID FROM users WHERE DiscordUser = %s;', (str(user),))
+        await discur.execute('SELECT PlayerUID FROM users WHERE DiscordID = %s;', (user.id,))
         result = await asyncio.gather(discur.fetchone())
         # Close Connection
         disconn.close()
@@ -54,7 +54,7 @@ class DBCommandsCog:
         # Open Connection
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
-        await discur.execute('SELECT PlayerUID from users WHERE DiscordUser = %s;', (str(user),))
+        await discur.execute('SELECT PlayerUID from users WHERE DiscordID = %s;', (user.id,))
         result = await asyncio.gather(discur.fetchone())
         realsteamid = result[0]
         realsteamid = realsteamid.get('PlayerUID')
@@ -561,7 +561,7 @@ class DBCommandsCog:
             xpData = await asyncio.gather(dzcur.fetchone())
             await dzcur.execute('SELECT Humanity FROM character_data WHERE PlayerUID = %s;', (steamid,))
             humData = await asyncio.gather(dzcur.fetchone())
-            await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
+            await discur.execute('SELECT Balance FROM users WHERE DiscordID = %s;', (ctx.author.id,))
             balData = await asyncio.gather(discur.fetchone())
             bankData = bankData[0]['BankCoins']
             xpData = xpData[0]['XP']

@@ -21,7 +21,7 @@ class RegistrationCog:
         discur = await disconn.cursor(aiomysql.DictCursor)
 
         # Check if ID exists
-        await discur.execute('SELECT PlayerUID FROM users WHERE DiscordUser = %s;', (str(user),))
+        await discur.execute('SELECT PlayerUID FROM users WHERE DiscordID = %s;', (user.id,))
         result = await asyncio.gather(discur.fetchone())
         # Close Connection
         disconn.close()
@@ -35,7 +35,7 @@ class RegistrationCog:
         # Open Connection
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
-        await discur.execute('SELECT PlayerUID from users WHERE DiscordUser = %s;', (str(user),))
+        await discur.execute('SELECT PlayerUID from users WHERE DiscordID = %s;', (user.id,))
         result = await asyncio.gather(discur.fetchone())
         realsteamid = result[0]
         realsteamid = realsteamid.get('PlayerUID')
@@ -69,16 +69,17 @@ class RegistrationCog:
             await channel.send(embed=embed)
 
     # --------------Registration--------------
-    @commands.command()
+    '''
+	@commands.command()
     async def fix(self, ctx):
         try:
             if(await RegistrationCog.check_id(self, ctx.author)):
                 disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
                 discur = await disconn.cursor(aiomysql.DictCursor)
-                await discur.execute('SELECT DiscordID FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
+                await discur.execute('SELECT DiscordID FROM users WHERE DiscordUser = %s;', (ctx.author.id,))
                 result = await asyncio.gather(discur.fetchone())
                 if result[0]['DiscordID'] == "0":
-                    await discur.execute('UPDATE users SET DiscordID = %s WHERE DiscordUser = %s;', (str(ctx.author.id), str(ctx.author)))
+                    await discur.execute('UPDATE users SET DiscordID = %s WHERE DiscordUser = %s;', (str(ctx.author.id), ctx.author.id))
                     await ctx.send(f"{ctx.author.mention} the command was succesful")
                 else:
                     await ctx.send(f"The DiscordUser: {ctx.author.mention} already ran the command!")
@@ -87,7 +88,8 @@ class RegistrationCog:
         except:
             await ctx.send(f"{ctx.author.mention}, an error has occured")
         disconn.close()
-    
+    '''
+	
     @commands.command(aliases=['register'])
     @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin")
     async def adduser(self, ctx, player: discord.Member):
@@ -192,7 +194,7 @@ class RegistrationCog:
                 # Open Connection
                 disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
                 discur = await disconn.cursor(aiomysql.DictCursor)
-                await discur.execute('UPDATE users SET PlayerUID = %s WHERE DiscordUser = %s;', (steamid, str(player)))
+                await discur.execute('UPDATE users SET PlayerUID = %s WHERE DiscordID = %s;', (steamid, plsyer.id))
                 embed = discord.Embed(
                     title=f"**Success** \U00002705", colour=discord.Colour(0x32CD32))
                 embed.set_footer(text="PGServerManager | TwiSt#2791")

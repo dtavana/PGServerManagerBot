@@ -15,6 +15,7 @@ class GamblingCog:
     def __init__(self, bot):
         self.bot = bot
         self.openpot = True
+        self.potstarted = False
 
     # --------------Logging--------------
     async def gamblelog(self, ctx, amount, type):
@@ -39,6 +40,7 @@ class GamblingCog:
             await channel.send(embed=embed)
 
     # ---------Checks--------
+
     async def currentplayers(self, ctx):
         import requests
         endpoint = "https://api.battlemetrics.com/servers/2551316?include=identifier"
@@ -63,7 +65,7 @@ class GamblingCog:
                 return True
             else:
                 return False
-            
+
         except Exception as e:
             await ctx.send(f'```py\n{traceback.format_exc()}\n```')
             await ctx.send(e)
@@ -75,7 +77,7 @@ class GamblingCog:
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
         # Check if ID exists
-        await discur.execute('SELECT PlayerUID FROM users WHERE DiscordUser = %s;', (str(user),))
+        await discur.execute('SELECT PlayerUID FROM users WHERE DiscordID = %s;', (user.id,))
         result = await asyncio.gather(discur.fetchone())
         # Close Connection
         disconn.close()
@@ -89,7 +91,7 @@ class GamblingCog:
         # Open Connection
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
-        await discur.execute('SELECT PlayerUID from users WHERE DiscordUser = %s;', (str(user),))
+        await discur.execute('SELECT PlayerUID from users WHERE DiscordID = %s;', (user.id,))
         result = await asyncio.gather(discur.fetchone())
         realsteamid = result[0]
         realsteamid = realsteamid['PlayerUID']
@@ -116,12 +118,13 @@ class GamblingCog:
             curBetsSorted = sorted(curBets, key=curBets.get, reverse=True)
             curBetPercentages = {}
             for i in curBetsSorted:
-                curBetPercentages[i] = "{0:.2f}".format(100 * (float(curBets[i]) / float(curTotal)))
+                curBetPercentages[i] = "{0:.2f}".format(
+                    100 * (float(curBets[i]) / float(curTotal)))
             data = ""
-            
+
             for key, value in curBetPercentages.items():
                 data += (f"{(discord.utils.find(lambda m: str(m) == key, ctx.guild.members)).mention} |  **{value}%**\n")
-            
+
             embed = discord.Embed(
                 title=f"Current Bets \U0001f911", colour=discord.Colour(0xFF00FF))
             embed.set_footer(text="PGServerManager | TwiSt#2791")
@@ -133,15 +136,13 @@ class GamblingCog:
         finally:
             disconn.close()
 
-
-
-
-    
     async def startcountdown(self, ctx):
         import random
 
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
+
+        self.potstarted = True
 
         await ctx.send("Countdown for the jackpot has started!")
         await asyncio.sleep(15)
@@ -160,7 +161,7 @@ class GamblingCog:
 
         self.openpot = False
         await ctx.send("Jackpot has closed! Picking a winner...")
-        await discur.execute('SELECT DiscordUser, Amount, BetID FROM jackpot')
+        await discur.execute('SELECT DiscordID, Amount, BetID FROM jackpot')
         data = await asyncio.gather(discur.fetchall())
         tickets = []
         for x in data[0]:
@@ -168,10 +169,10 @@ class GamblingCog:
             ticketsData = await asyncio.gather(discur.fetchall())
             for y in ticketsData[0]:
                 tickets.append(y['TicketEnd'])
-            player = x['DiscordUser']
+            player = x['DiscordID']
             amount = x['Amount']
             betid = x['BetID']
-            await discur.execute('UPDATE jackpot SET TicketStart = %s, TicketEnd = %s WHERE DiscordUser = %s AND BetID = %s;', (max(tickets) + 1, max(tickets) + amount, player, betid))
+            await discur.execute('UPDATE jackpot SET TicketStart = %s, TicketEnd = %s WHERE DiscordID = %s AND BetID = %s;', (max(tickets) + 1, max(tickets) + amount, player, betid))
             tickets = []
 
         await discur.execute('SELECT * FROM jackpot')
@@ -212,13 +213,14 @@ class GamblingCog:
 
         await ctx.send(f"{winnerMember.mention} won **{total}** coins with a **{chance}%** chance. Ticket#**{winningTicket}**")
         await ctx.send(f"Use `pg claim ENTERAMOUNT` to claim your rewards!")
-        await discur.execute('UPDATE users SET Balance = Balance + %s WHERE DiscordUser = %s;', (total, winnerUser))
-        await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (winnerUser))
+        await discur.execute('UPDATE users SET Balance = Balance + %s WHERE DiscordID = %s;', (total, winnerMember.id))
+        await discur.execute('SELECT Balance FROM users WHERE DiscordID = %s;', (winnerMember.id))
         curBal = await asyncio.gather(discur.fetchone())
         curBal = curBal[0]['Balance']
         await ctx.send(f"{winnerMember.mention}'s new balance is **{curBal}**")
         await discur.execute('DELETE FROM jackpot')
         self.openpot = True
+        self.potstarted = False
         disconn.close()
 
     @commands.command()
@@ -231,7 +233,7 @@ class GamblingCog:
         if await GamblingCog.check_id(self, ctx.author):
             steamid = await GamblingCog.get_steamid(self, ctx.author)
             # Get the users current balance
-            await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
+            await discur.execute('SELECT Balance FROM users WHERE DiscordID = %s;', (ctx.author.id,))
             curBal = await asyncio.gather(discur.fetchone())
             curBal = curBal[0]['Balance']
             # Get users current BankCoins
@@ -261,13 +263,13 @@ class GamblingCog:
             curPlayers = await GamblingCog.currentplayers(self, ctx)
             if (steamid not in curPlayers):
                 # Update the balance
-                await discur.execute('UPDATE users SET Balance = Balance + %s WHERE DiscordUser = %s;', (amount, str(ctx.author),))
-                await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
+                await discur.execute('UPDATE users SET Balance = Balance + %s WHERE DiscordID = %s;', (amount, ctx.author.id,))
+                await discur.execute('SELECT Balance FROM users WHERE DiscordID = %s;', (ctx.author.id,))
                 newBal = await asyncio.gather(discur.fetchone())
                 newBal = newBal[0]['Balance']
 
                 if (newBal == curBal):
-                    await ctx.send(f"An error has occured. {ctx.author.mention}'s balance has not changed and no coins were lost")
+                    await ctx.send(f"An error has occurred. {ctx.author.mention}'s balance has not changed and no coins were lost")
                     dzconn.close()
                     disconn.close()
                     return
@@ -280,7 +282,7 @@ class GamblingCog:
                 new = await asyncio.gather(dzcur.fetchone())
 
                 if (original == new):
-                    await ctx.send(f"An error has occured. {ctx.author.mention}'s coins have not changed")
+                    await ctx.send(f"An error has occurred. {ctx.author.mention}'s coins have not changed")
                     dzconn.close()
                     disconn.close()
                     return
@@ -324,7 +326,7 @@ class GamblingCog:
         if await GamblingCog.check_id(self, ctx.author):
             steamid = await GamblingCog.get_steamid(self, ctx.author)
             if (steamid not in curPlayers):
-                await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
+                await discur.execute('SELECT Balance FROM users WHERE DiscordID = %s;', (ctx.author.id,))
                 curBal = await asyncio.gather(discur.fetchone())
                 curBal = curBal[0]['Balance']
                 await dzcur.execute('SELECT BankCoins FROM player_data WHERE PlayerUID = %s;', (steamid,))
@@ -336,7 +338,7 @@ class GamblingCog:
                     disconn.close()
                     dzconn.close()
                     return
-                
+
                 if (amount == "all"):
                     amount = curBal
 
@@ -365,8 +367,8 @@ class GamblingCog:
                     await ctx.send("An error has occured and you have not lost any coins")
                 else:
                     # Perform the query
-                    await discur.execute('UPDATE users SET Balance = Balance - %s WHERE DiscordUser = %s;', (amount, str(ctx.author),))
-                    await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
+                    await discur.execute('UPDATE users SET Balance = Balance - %s WHERE DiscordID = %s;', (amount, ctx.author.id,))
+                    await discur.execute('SELECT Balance FROM users WHERE DiscordID = %s;', (ctx.author.id,))
                     newBal = await asyncio.gather(discur.fetchone())
                     newBal = newBal[0]['Balance']
                     if (newBal == curBal):
@@ -406,20 +408,20 @@ class GamblingCog:
             disconn.close()
             return
 
-        await discur.execute('SELECT Amount FROM jackpot WHERE DiscordUser = %s;', (str(ctx.author)))
+        await discur.execute('SELECT Amount FROM jackpot WHERE DiscordID = %s;', (ctx.author.id))
         curBets = await asyncio.gather(discur.fetchall())
         curTotal = 0
         for x in curBets[0]:
             # Get the players true total
             curTotal += x['Amount']
-        
+
         maxBet = 10000000 - curTotal
 
         if maxBet == 0:
             await ctx.send(f"{ctx.author.mention} can not bet anymore!")
             disconn.close()
             return
-        
+
         if(type(amount) is int):
             if (amount < 5000):
                 await ctx.send(f"{ctx.author.mention} needs to bet at least 5000 coins!")
@@ -430,12 +432,11 @@ class GamblingCog:
                 await ctx.send(f"{ctx.author.mention} can not bet over 10000000 coins in one pot!")
                 disconn.close()
                 return
-        
 
         if await GamblingCog.check_id(self, ctx.author):
             steamid = await GamblingCog.get_steamid(self, ctx.author)
             # Get starting value
-            await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
+            await discur.execute('SELECT Balance FROM users WHERE DiscordID = %s;', (ctx.author.id,))
             curBal = await asyncio.gather(discur.fetchone())
             curBal = curBal[0]['Balance']
             # Check if they have enough
@@ -455,10 +456,10 @@ class GamblingCog:
                     await ctx.send("Wait until another user goes in before going in again")
                     disconn.close()
                     return
-                await discur.execute('INSERT INTO jackpot (DiscordUser, Amount) VALUES (%s,%s);', (str(ctx.author), amount))
+                await discur.execute('INSERT INTO jackpot (DiscordUser, DiscordID, Amount) VALUES (%s,%s,%s);', (str(ctx.author), ctx.author.id, amount))
                 # Remove coins
-                await discur.execute('UPDATE users SET Balance = Balance - %s WHERE DiscordUser = %s;', (amount, str(ctx.author)))
-                await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
+                await discur.execute('UPDATE users SET Balance = Balance - %s WHERE DiscordID = %s;', (amount, ctx.author.id))
+                await discur.execute('SELECT Balance FROM users WHERE DiscordID = %s;', (ctx.author.id,))
                 newBal = await asyncio.gather(discur.fetchone())
                 newBal = newBal[0]['Balance']
                 if newBal != curBal:
@@ -466,16 +467,12 @@ class GamblingCog:
                     curPot = await asyncio.gather(discur.fetchall())
                     trueTotal = 0
                     curTotal = 0
-                    currentPlayers = []
                     for x in curPot[0]:
                         # Get the players true total
                         if (x['DiscordUser'] == str(ctx.author)):
                             trueTotal += x['Amount']
                         # Get total of all bets
                         curTotal += x['Amount']
-                        # Get all users current bets
-                        if x['DiscordUser'] not in currentPlayers:
-                            currentPlayers.append(x['DiscordUser'])
 
                     # Calculate chance of winning
                     chance = (100 * (float(trueTotal) / float(curTotal)))
@@ -494,7 +491,7 @@ class GamblingCog:
                     await ctx.send(embed=embed)
                     await GamblingCog.gamblelog(self, ctx, amount, "Jackpot")
                     # Start the countdown with 2 players
-                    if(len(curPot[0]) == 2):
+                    if(len(curPot[0]) >= 2 and not self.potstarted):
                         await GamblingCog.startcountdown(self, ctx)
 
                 else:
@@ -568,22 +565,22 @@ class GamblingCog:
                 return
             '''
             # Get starting values
-            await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
+            await discur.execute('SELECT Balance FROM users WHERE DiscordID = %s;', (ctx.author.id,))
             curBalDonator = await asyncio.gather(discur.fetchone())
             curBalDonator = curBalDonator[0]['Balance']
-            await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(user),))
+            await discur.execute('SELECT Balance FROM users WHERE DiscordID = %s;', (user.id,))
             curBalReceiver = await asyncio.gather(discur.fetchone())
             curBalReceiver = curBalReceiver[0]['Balance']
             # Check if they have enough
             if(curBalDonator and (curBalDonator >= amount)):
                 # Remove coins
-                await discur.execute('UPDATE users SET Balance = Balance - %s WHERE DiscordUser = %s;', (amount, str(ctx.author)))
-                await discur.execute('UPDATE users SET Balance = Balance + %s WHERE DiscordUser = %s;', (amount, str(user)))
+                await discur.execute('UPDATE users SET Balance = Balance - %s WHERE DiscordID = %s;', (amount, ctx.author.id))
+                await discur.execute('UPDATE users SET Balance = Balance + %s WHERE DiscordID = %s;', (amount, user.id))
 
-                await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(ctx.author),))
+                await discur.execute('SELECT Balance FROM users WHERE DiscordID = %s;', (ctx.author.id,))
                 newBalDonator = await asyncio.gather(discur.fetchone())
                 newBalDonator = newBalDonator[0]['Balance']
-                await discur.execute('SELECT Balance FROM users WHERE DiscordUser = %s;', (str(user),))
+                await discur.execute('SELECT Balance FROM users WHERE DiscordID = %s;', (user.id,))
                 newBalReceiver = await asyncio.gather(discur.fetchone())
                 newBalReceiver = newBalReceiver[0]['Balance']
 
