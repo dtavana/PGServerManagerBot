@@ -52,7 +52,7 @@ class GamblingCog:
                 players.append(i['attributes']['identifier'])
         return players
 
-    async def unlimitedbank(self, ctx, steamid):
+    async def bankcheck(self, ctx, steamid):
         try:
             dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
             dzcur = await dzconn.cursor(aiomysql.DictCursor)
@@ -62,10 +62,19 @@ class GamblingCog:
             result = result[1:-1]
             result = result.split(',')
             if ("'UnlimitedBank'" in result):
-                return True
+                return -1
+            elif ("'BankLimit20M'" in result):
+                return 2
+            elif ("'BankLimit10M'" in result):
+                return 2
             else:
+<<<<<<< HEAD
+                return 0
+            
+=======
                 return False
 
+>>>>>>> 5a5433f8f1598ef12c8269396a23a530de03f8fb
         except Exception as e:
             await ctx.send(f'```py\n{traceback.format_exc()}\n```')
             await ctx.send(e)
@@ -348,10 +357,24 @@ class GamblingCog:
                     disconn.close()
                     return
 
-                result = await GamblingCog.unlimitedbank(self, ctx, steamid)
-                if (result != True):
+                result = await GamblingCog.bankcheck(self, ctx, steamid)
+                if (result == 2):
                     if (origCoins + amount > 20000000):
                         await ctx.send(f"{ctx.author.mention} can not claim {amount} coins as it will put their bank over 20,000,000")
+                        await ctx.send(f"{ctx.author.mention}'s current BankCoins is {origCoins}")
+                        dzconn.close()
+                        disconn.close()
+                        return
+                elif (result == 1):
+                    if (origCoins + amount > 10000000):
+                        await ctx.send(f"{ctx.author.mention} can not claim {amount} coins as it will put their bank over 10,000,000")
+                        await ctx.send(f"{ctx.author.mention}'s current BankCoins is {origCoins}")
+                        dzconn.close()
+                        disconn.close()
+                        return
+                elif (result == 0):
+                    if (origCoins + amount > 5000000):
+                        await ctx.send(f"{ctx.author.mention} can not claim {amount} coins as it will put their bank over 5,000,000")
                         await ctx.send(f"{ctx.author.mention}'s current BankCoins is {origCoins}")
                         dzconn.close()
                         disconn.close()
@@ -621,9 +644,14 @@ class GamblingCog:
             embed = discord.Embed(
                 title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
             embed.set_footer(text="PGServerManager | TwiSt#2791")
-            embed.add_field(
-                name="Error:", value=f"The Discord Account {ctx.author.mention} is currently not registered!\n"
-                f"Please make a ticket as follows : `-new registration INSERTSTEAM64ID`", inline=False)
+            if await GamblingCog.check_id(self, ctx.author):
+                embed.add_field(
+                    name="Error:", value=f"The Discord Account {ctx.author.mention} is currently not registered!\n"
+                    f"Please make a ticket as follows : `-new registration INSERTSTEAM64ID`", inline=False)
+            else:
+                embed.add_field(
+                    name="Error:", value=f"The Discord Account {user.mention} is currently not registered!\n"
+                    f"Please make a ticket as follows : `-new registration INSERTSTEAM64ID`", inline=False)
             await ctx.send(embed=embed)
             # Close the connections
             disconn.close()
