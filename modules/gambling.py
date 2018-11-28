@@ -639,7 +639,7 @@ class GamblingCog:
             embed = discord.Embed(
                 title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
             embed.set_footer(text="PGServerManager | TwiSt#2791")
-            if await GamblingCog.check_id(self, ctx.author):
+            if not (await GamblingCog.check_id(self, ctx.author)):
                 embed.add_field(
                     name="Error:", value=f"The Discord Account {ctx.author.mention} is currently not registered!\n"
                     f"Please make a ticket as follows : `-new registration INSERTSTEAM64ID`", inline=False)

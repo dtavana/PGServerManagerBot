@@ -32,6 +32,16 @@ class DBCommandsCog:
 	'''
 
     # --------------Checks--------------
+    async def getLastUpdated(self, ctx, steamid):
+        # Open Connection
+        dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
+        dzcur = await dzconn.cursor(aiomysql.DictCursor)
+
+        await dzcur.execute('SELECT DATEDIFF(NOW(), Datestamp) FROM object_data WHERE LOCATE(%s, Worldspace) > 0 AND Classname = "Plastic_Pole_EP1_DZ";', (steamid,))
+        days = await asyncio.gather(dzcur.fetchone())
+        dzconn.close()
+        return days[0]['DATEDIFF(NOW(), Datestamp)']
+
     async def check_id(self, user: discord.Member):
 
         # Open Connection
@@ -579,6 +589,26 @@ class DBCommandsCog:
             await ctx.author.send(embed=embed)
             dzconn.close()
             disconn.close()
+
+    @commands.command()
+    async def checkplot(self, ctx):
+        if await DBCommandsCog.check_id(self, ctx.author):
+            steamid = await DBCommandsCog.get_steamid(self, ctx.author)
+            days = await DBCommandsCog.getLastUpdated(self, ctx, steamid)
+            if(days != None):
+                embed = discord.Embed(
+                    title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
+                embed.set_footer(text="PGServerManager | TwiSt#2791")
+                embed.add_field(name=f"Data:", value=f"You last maintained your Plot Pole **{days}** day(s) ago")
+            else:
+                embed = discord.Embed(
+                    title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
+                embed.set_footer(text="PGServerManager | TwiSt#2791")
+                embed.add_field(
+                    name="Error:", value=f"Did not find a Plot Pole linked to your STEAM64ID")
+            await ctx.author.send(embed=embed)
+        else:
+            await ctx.send(f"The DiscordUser: {ctx.author.mention} is not registered. Please create a ticket with your SteamID in the subject!")
 
     '''
     @commands.command()
