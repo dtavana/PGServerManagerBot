@@ -61,6 +61,8 @@ class ServerManagementCog:
             dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
             dzcur = await dzconn.cursor(aiomysql.DictCursor)
 
+            notfound = False
+
             if(await ServerManagementCog.validsteamidcheck(self, ctx, user) != True):
                 try:
                     user = await commands.MemberConverter().convert(ctx, user)
@@ -72,59 +74,110 @@ class ServerManagementCog:
             else:
                 steamid = user
             
+            #Object Data
             await dzcur.execute('SELECT ObjectUID, ObjectID, Worldspace, Inventory, Classname FROM object_data WHERE LOCATE(%s, Worldspace) > 0 AND LOCATE(%s, Inventory) > 0;', (steamid, classname))
             data = await asyncio.gather(dzcur.fetchall())
             if not data[0]:
+                notfound = True
+            else:
+                for x in data[0]:
+                    inventory = x['Inventory']
+                    inventory = ast.literal_eval(inventory)
+                    guns = inventory[0]
+                    mags = inventory[1]
+                    backpacks = inventory[2]
+                    worldspace = x['Worldspace']
+                    worldspace = worldspace[1:]
+                    worldspace = worldspace[worldspace.find('['):worldspace.find(']') + 1]
+                    ouid = x['ObjectUID']
+                    oid = x['ObjectID']
+                    objectclassname = x['Classname']
+
+                    guns[0] = [x.lower() for x in guns[0]]
+                    mags[0] = [x.lower() for x in mags[0]]
+                    backpacks[0] = [x.lower() for x in backpacks[0]]
+                    newclassname = classname.lower()
+
+                    if newclassname in guns[0]:
+                        index = guns[0].index(newclassname)
+                        count = guns[1][index]
+                    elif newclassname in mags[0]:
+                        index = mags[0].index(newclassname)
+                        count = mags[1][index]
+                    elif newclassname in backpacks[0]:
+                        index = backpacks[0].index(newclassname)
+                        count = backpacks[1][index]
+                    else:
+                        await ctx.send("An error has occured")
+                        return
+                    try:
+                        userString = f"**User**: {user.mention}\n"
+                    except:
+                        userString = f"**User**: {user}\n"
+                    
+                    embed = discord.Embed(
+                        title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
+                    embed.set_footer(text="PGServerManager | TwiSt#2791")
+                    embed.add_field(name=f"Data:", value=f"**Type**: Object\n"
+                                    f"**Classname**: {classname}\n"
+                                    f"**Count**: {count}\n"
+                                    f"**Worldspace**: {worldspace}\n"
+                                    f"**Object Classname**: {objectclassname}\n"
+                                    f"**Object UID**: {ouid}\n"
+                                    f"**Object ID**: {oid}\n" + userString, inline=False)
+                    
+                    await ctx.send(embed=embed)
+            #Garage
+            await dzcur.execute('SELECT id, DisplayName, Classname, Inventory FROM garage WHERE PlayerUID = %s AND LOCATE(%s, Inventory) > 0;', (steamid, classname))
+            data = await asyncio.gather(dzcur.fetchall())
+            if not data[0] and notfound:
                 try:
                     await ctx.send(f"Did not find any objects containing {classname} that are owned by {user.mention}")
                 except:
                     await ctx.send(f"Did not find any objects containing {classname} that are owned by {user}")
-                return
-            for x in data[0]:
-                inventory = x['Inventory']
-                inventory = ast.literal_eval(inventory)
-                guns = inventory[0]
-                mags = inventory[1]
-                backpacks = inventory[2]
-                worldspace = x['Worldspace']
-                worldspace = worldspace[1:]
-                worldspace = worldspace[worldspace.find('['):worldspace.find(']') + 1]
-                ouid = x['ObjectUID']
-                oid = x['ObjectID']
-                objectclassname = x['Classname']
+            else:
+                for x in data[0]:
+                    inventory = x['Inventory']
+                    inventory = ast.literal_eval(inventory)
+                    guns = inventory[0]
+                    mags = inventory[1]
+                    backpacks = inventory[2]
+                    gid = x['id']
+                    objectclassname = x['Classname']
+                    objectdisplayname = x['DisplayName']
 
-                guns[0] = [x.lower() for x in guns[0]]
-                mags[0] = [x.lower() for x in mags[0]]
-                backpacks[0] = [x.lower() for x in backpacks[0]]
-                newclassname = classname.lower()
+                    guns[0] = [x.lower() for x in guns[0]]
+                    mags[0] = [x.lower() for x in mags[0]]
+                    backpacks[0] = [x.lower() for x in backpacks[0]]
+                    newclassname = classname.lower()
 
-                if newclassname in guns[0]:
-                    index = guns[0].index(newclassname)
-                    count = guns[1][index]
-                elif newclassname in mags[0]:
-                    index = mags[0].index(newclassname)
-                    count = mags[1][index]
-                elif newclassname in backpacks[0]:
-                    index = backpacks[0].index(newclassname)
-                    count = backpacks[1][index]
-                else:
-                    await ctx.send("An error has occured")
-                    return
-                try:
-                    userString = f"**User**: {user.mention}\n"
-                except:
-                    userString = f"**User**: {user}\n"
-                
-                embed = discord.Embed(
-                    title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
-                embed.set_footer(text="PGServerManager | TwiSt#2791")
-                embed.add_field(name=f"Data:", value=f"**Object Classname**: {objectclassname}\n"
-                                                        f"**Object UID**: {ouid}\n"
-                                                        f"**Object ID**: {oid}\n"
-                                                        f"**Classname**: {classname}\n"
-                                                        f"**Count**: {count}\n"
-                                                        f"**Worldspace**: {worldspace}\n" + userString, inline=False)
-                await ctx.send(embed=embed)
+                    if newclassname in guns[0]:
+                        index = guns[0].index(newclassname)
+                        count = guns[1][index]
+                    elif newclassname in mags[0]:
+                        index = mags[0].index(newclassname)
+                        count = mags[1][index]
+                    elif newclassname in backpacks[0]:
+                        index = backpacks[0].index(newclassname)
+                        count = backpacks[1][index]
+                    else:
+                        await ctx.send("An error has occured")
+                        return
+                    try:
+                        userString = f"**User**: {user.mention}\n"
+                    except:
+                        userString = f"**User**: {user}\n"
+
+                    embed = discord.Embed(
+                        title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
+                    embed.set_footer(text="PGServerManager | TwiSt#2791")
+                    embed.add_field(name=f"Data:", value=f"**Type**: Garage\n"
+                                    f"**Item Classname**: {classname}\n"
+                                    f"**Count**: {count}\n"
+                                    f"**Object Displayname**: {objectdisplayname}\n"
+                                    f"**Object Classname**: {objectclassname}\n"
+                                    f"**Garage ID**: {gid}\n" + userString, inline=False)
+                    await ctx.send(embed=embed)
         except Exception as e:
             await ctx.send(f"{e}")
         finally:
