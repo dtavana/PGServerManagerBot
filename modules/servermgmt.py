@@ -10,11 +10,127 @@ import datetime
 import config as cfg
 import os
 import subprocess
+import ast
 
 
 class ServerManagementCog:
     def __init__(self, bot):
         self.bot = bot
+    
+    async def validsteamidcheck(self, ctx, steamid):
+        if (steamid[:7] == "7656119" and len(steamid) == 17):
+            return True
+        else:
+            return False
+    
+    async def check_id(self, user: discord.Member):
+
+        # Open Connection
+        disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
+        discur = await disconn.cursor(aiomysql.DictCursor)
+
+        # Check if ID exists
+        await discur.execute('SELECT PlayerUID FROM users WHERE DiscordID = %s;', (user.id,))
+        result = await asyncio.gather(discur.fetchone())
+        # Close Connection
+        disconn.close()
+
+        # Check if anything was returned
+        if result[0] == None:
+            return False
+        else:
+            return True
+
+    async def get_steamid(self, user: discord.Member):
+        # Open Connection
+        disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
+        discur = await disconn.cursor(aiomysql.DictCursor)
+        await discur.execute('SELECT PlayerUID from users WHERE DiscordID = %s;', (user.id,))
+        result = await asyncio.gather(discur.fetchone())
+        realsteamid = result[0]
+        realsteamid = realsteamid.get('PlayerUID')
+        # Close Connection
+        disconn.close()
+        return realsteamid
+
+    @commands.command()
+    @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin")
+    async def itemcheck(self, ctx, user, classname: str):
+        try: 
+            # Open Connection
+            dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
+            dzcur = await dzconn.cursor(aiomysql.DictCursor)
+
+            if(await ServerManagementCog.validsteamidcheck(self, ctx, user) != True):
+                try:
+                    user = await commands.MemberConverter().convert(ctx, user)
+                    steamid = await ServerManagementCog.get_steamid(self, user)
+                    if (steamid == None):
+                        await ctx.send(f"Could not find a registration for {user.mention}")
+                except:
+                    await ctx.send(f"Invalid value for user: `{user}` (Must be a **Discord User* or a Valid **STEAM64ID**)")
+            else:
+                steamid = user
+            
+            await dzcur.execute('SELECT ObjectUID, ObjectID, Worldspace, Inventory, Classname FROM object_data WHERE LOCATE(%s, Worldspace) > 0 AND LOCATE(%s, Inventory) > 0;', (steamid, classname))
+            data = await asyncio.gather(dzcur.fetchall())
+            if not data[0]:
+                try:
+                    await ctx.send(f"Did not find any objects containing {classname} that are owned by {user.mention}")
+                except:
+                    await ctx.send(f"Did not find any objects containing {classname} that are owned by {user}")
+                return
+            for x in data[0]:
+                inventory = x['Inventory']
+                inventory = ast.literal_eval(inventory)
+                guns = inventory[0]
+                mags = inventory[1]
+                backpacks = inventory[2]
+                worldspace = x['Worldspace']
+                worldspace = worldspace[1:]
+                worldspace = worldspace[worldspace.find('['):worldspace.find(']') + 1]
+                ouid = x['ObjectUID']
+                oid = x['ObjectID']
+                objectclassname = x['Classname']
+
+                guns[0] = [x.lower() for x in guns[0]]
+                mags[0] = [x.lower() for x in mags[0]]
+                backpacks[0] = [x.lower() for x in backpacks[0]]
+                newclassname = classname.lower()
+
+                if newclassname in guns[0]:
+                    index = guns[0].index(newclassname)
+                    count = guns[1][index]
+                elif newclassname in mags[0]:
+                    index = mags[0].index(newclassname)
+                    count = mags[1][index]
+                elif newclassname in backpacks[0]:
+                    index = backpacks[0].index(newclassname)
+                    count = backpacks[1][index]
+                else:
+                    await ctx.send("An error has occured")
+                    return
+                try:
+                    userString = f"**User**: {user.mention}\n"
+                except:
+                    userString = f"**User**: {user}\n"
+                
+                embed = discord.Embed(
+                    title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
+                embed.set_footer(text="PGServerManager | TwiSt#2791")
+                embed.add_field(name=f"Data:", value=f"**Object Classname**: {objectclassname}\n"
+                                                        f"**Object UID**: {ouid}\n"
+                                                        f"**Object ID**: {oid}\n"
+                                                        f"**Classname**: {classname}\n"
+                                                        f"**Count**: {count}\n"
+                                                        f"**Worldspace**: {worldspace}\n" + userString, inline=False)
+                await ctx.send(embed=embed)
+        except Exception as e:
+            await ctx.send(f"{e}")
+        finally:
+            dzconn.close()
+             
+    
     
     @commands.command()
     @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin", "Admin")

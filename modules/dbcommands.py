@@ -40,7 +40,10 @@ class DBCommandsCog:
         await dzcur.execute('SELECT DATEDIFF(NOW(), Datestamp) FROM object_data WHERE LOCATE(%s, Worldspace) > 0 AND Classname = "Plastic_Pole_EP1_DZ";', (steamid,))
         days = await asyncio.gather(dzcur.fetchone())
         dzconn.close()
-        return days[0]['DATEDIFF(NOW(), Datestamp)']
+        if (days == None):
+            return None
+        else:
+            return days[0]['DATEDIFF(NOW(), Datestamp)']
 
     async def check_id(self, user: discord.Member):
 
