@@ -9,6 +9,8 @@ import traceback
 import datetime
 import config as cfg
 import typing
+import uuid
+import random
 
 
 class GamblingCog:
@@ -16,6 +18,7 @@ class GamblingCog:
         self.bot = bot
         self.openpot = True
         self.potstarted = False
+        self.curflips = {}
 
     # --------------Logging--------------
     async def gamblelog(self, ctx, amount, type):
@@ -38,6 +41,89 @@ class GamblingCog:
 
             channel = self.bot.get_channel(488893718125084687)
             await channel.send(embed=embed)
+
+    async def createFlipChannel(self, ctx, amount: int):
+        try:
+            disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
+            discur = await disconn.cursor(aiomysql.DictCursor)
+            channelToken = str(uuid.uuid4())
+            channelToken = channelToken[:channelToken.find('-')]
+            category = ctx.guild.get_channel(518926958630010911)
+            channelName = f'coinflip-{channelToken}'
+            channel = await ctx.guild.create_text_channel(channelName, category=category)
+            await discur.execute("INSERT INTO coinflip (DiscordID, ChannelID, Amount) VALUES (%s, %s, %s);", (ctx.author.id, channel.id, amount))
+            await channel.set_permissions(ctx.author, read_messages=True, send_messages=True)
+            await ctx.send(f"{ctx.author.mention} waiting for 1 other player to join your flip channel.")
+            await channel.send(f"This flip is for {amount} Coins.")
+        except Exception as e:
+            await ctx.send(e)
+        finally:
+            disconn.close()
+
+    async def getCurFlips(self, ctx, type = False):
+        try:
+            disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
+            discur = await disconn.cursor(aiomysql.DictCursor)
+            savedFlips = {}
+            await discur.execute('SELECT * FROM coinflip;')
+            curFlips = await asyncio.gather(discur.fetchall())
+            curFlips = curFlips[0]
+            for x in curFlips:
+                savedFlips[int (x['ChannelID'])] = [x['Amount'], int(x['DiscordID'])]
+            if type:
+                channelStrings = []
+                for x in ctx.guild.channels:
+                    if int(x.id) in savedFlips:
+                        channelStrings.append(
+                            f"**Channel**: <#{x.id}> | **Amount**: {savedFlips.get(int(x.id))[0]} | **User**: {ctx.guild.get_member(savedFlips.get(int(x.id))[1]).mention}")
+                return channelStrings
+            else:
+                return savedFlips
+        except Exception as e:
+            await ctx.send(e)
+        finally:
+            disconn.close()
+        
+    
+    async def addtoflip(self, ctx, channel, amount):
+        try:
+            disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
+            discur = await disconn.cursor(aiomysql.DictCursor)
+            await discur.execute('SELECT DiscordID FROM coinflip WHERE ChannelID = %s;', (channel.id,))
+            origUser = await asyncio.gather(discur.fetchone())
+            origUser = origUser[0]
+            origUser = origUser['DiscordID']
+            await discur.execute("DELETE FROM coinflip WHERE ChannelID = %s;", (channel.id,))
+           
+            await channel.set_permissions(ctx.author, read_messages=True, send_messages=True)
+            await channel.send("Starting coinflip!")
+            await channel.send("Calculating winner...")
+            await asyncio.sleep(3)
+
+            coin = random.randint(1, 2)
+            if coin == 1:
+                winner = ctx.guild.get_member(int(origUser))
+            else:
+                winner = ctx.guild.get_member(ctx.author.id)
+            
+            await channel.send("And the winner is...")
+            await asyncio.sleep(3)
+            await channel.send(f"{winner.mention}")
+            await channel.send(f"Total Earnings: {amount}")
+            await channel.send(f"Use `pg claim ENTERAMOUNT` to claim your rewards!")
+            await discur.execute('UPDATE users SET Balance = Balance + %s WHERE DiscordID = %s;', ((amount * 2), winner.id))
+            await discur.execute('SELECT Balance FROM users WHERE DiscordID = %s;', (winner.id))
+            curBal = await asyncio.gather(discur.fetchone())
+            curBal = curBal[0]['Balance']
+            await channel.send(f"{winner.mention}'s new balance is **{curBal}**")
+            await channel.send("Deleting channel in 30 seconds")
+            await winner.send(f"You won your coinflip for {amount} coins!")
+            await asyncio.sleep(30)
+            await channel.delete()
+        except Exception as e:
+            await channel.send(e)
+        finally:
+            disconn.close()
 
     # ---------Checks--------
 
@@ -111,14 +197,14 @@ class GamblingCog:
 
             curBets = {}
             curTotal = 0
-            await discur.execute('SELECT DiscordUser, Amount FROM jackpot')
+            await discur.execute('SELECT DiscordID, Amount FROM jackpot')
             curPot = await asyncio.gather(discur.fetchall())
             for x in curPot[0]:
                 curTotal += x['Amount']
-                if x['DiscordUser'] not in curBets:
-                    curBets[x['DiscordUser']] = x['Amount']
+                if x['DiscordID'] not in curBets:
+                    curBets[x['DiscordID']] = x['Amount']
                 else:
-                    curBets[x['DiscordUser']] += x['Amount']
+                    curBets[x['DiscordID']] += x['Amount']
             curBetsSorted = sorted(curBets, key=curBets.get, reverse=True)
             curBetPercentages = {}
             for i in curBetsSorted:
@@ -127,7 +213,10 @@ class GamblingCog:
             data = ""
 
             for key, value in curBetPercentages.items():
-                data += (f"{(discord.utils.find(lambda m: str(m) == key, ctx.guild.members)).mention} |  **{value}%**\n")
+                try:
+                    data += (f"{ctx.guild.get_member(int (key)).mention} |  **{value}%**\n")
+                except:
+                    data += (f"{key} |  **{value}%**\n")
 
             embed = discord.Embed(
                 title=f"Current Bets \U0001f911", colour=discord.Colour(0xFF00FF))
@@ -188,16 +277,15 @@ class GamblingCog:
             ticketsFin.append(x['TicketEnd'])
             total += x['Amount']
         winningTicket = random.randint(1, max(ticketsFin) + 1)
-        await discur.execute('SELECT DiscordUser from jackpot WHERE TicketStart <= %s and TicketEnd >= %s;', (winningTicket, winningTicket))
+        await discur.execute('SELECT DiscordID from jackpot WHERE TicketStart <= %s and TicketEnd >= %s;', (winningTicket, winningTicket))
         winner = await asyncio.gather(discur.fetchone())
         while winner[0] == None:
             winningTicket = random.randint(min(ticketsFin), max(ticketsFin))
-            await discur.execute('SELECT DiscordUser from jackpot WHERE TicketStart <= %s and TicketEnd >= %s;', (winningTicket, winningTicket))
+            await discur.execute('SELECT DiscordID from jackpot WHERE TicketStart <= %s and TicketEnd >= %s;', (winningTicket, winningTicket))
             winner = await asyncio.gather(discur.fetchone())
 
-        winnerUser = winner[0]['DiscordUser']
-        winnerMember = discord.utils.find(
-            lambda m: str(m) == winnerUser, ctx.guild.members)
+        winnerUser = winner[0]['DiscordID']
+        winnerMember = ctx.guild.get_member(int(winnerUser))
         if winnerMember == None:
             winnerMember = winnerUser
 
@@ -207,7 +295,7 @@ class GamblingCog:
         curTotal = 0
         for x in curPot[0]:
             # Get the players true total
-            if (x['DiscordUser'] == winnerUser):
+            if (x['DiscordID'] == winnerUser):
                 winnerTotal += x['Amount']
             curTotal += x['Amount']
 
@@ -227,6 +315,134 @@ class GamblingCog:
         self.potstarted = False
         disconn.close()
 
+    @commands.command(aliases=['coinflip'])
+    @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin")
+    async def startflip(self, ctx, amount: typing.Union[int, str]):
+        try:
+            disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
+            discur = await disconn.cursor(aiomysql.DictCursor)
+
+            coinflipchanid = 519315014490914816
+            channelCheck = self.bot.get_channel(coinflipchanid)
+            if (ctx.channel != channelCheck):
+                await ctx.send(f"Please run this in <#{coinflipchanid}>")
+                return
+            
+            if await GamblingCog.check_id(self, ctx.author):
+                await discur.execute("SELECT COUNT(IF (DiscordID = %s, 1, NULL)) AS numFlips FROM coinflip;", (ctx.author.id,))
+                numFlips = await asyncio.gather(discur.fetchone())
+                numFlips = numFlips[0]
+                numFlips = numFlips['numFlips']
+                if numFlips >= 2:
+                    await ctx.send(f"{ctx.author.mention} can only have 2 flips at a time!")
+                    return
+                await discur.execute('SELECT Balance FROM users WHERE DiscordID = %s;', (ctx.author.id,))
+                curBal = await asyncio.gather(discur.fetchone())
+                curBal = curBal[0]['Balance']
+
+                if amount == "max":
+                    amount = curBal
+                elif curBal >= amount:
+                    pass
+                else:
+                    await ctx.send(f"{ctx.author.mention} does not have enough coins in their balance to start a coinflip of {amount}")
+                    return
+                
+                if amount < 5000:
+                    await ctx.send(f"{ctx.author.mention} minimum amount for a coinflip is 5000!")
+                    return
+                
+                await GamblingCog.createFlipChannel(self, ctx, amount)
+                await discur.execute('UPDATE users SET Balance = Balance - %s WHERE DiscordID = %s;', (amount, ctx.author.id))
+                
+                await discur.execute('SELECT Balance FROM users WHERE DiscordID = %s;', (ctx.author.id,))
+                newBal = await asyncio.gather(discur.fetchone())
+                newBal = newBal[0]['Balance']
+            else:
+                await ctx.send(f"The DiscordUser: {ctx.author.mention} is not registered. Please create a ticket with your SteamID in the subject!")
+                return
+
+        except Exception as e:
+            await ctx.send(e)
+        finally:
+            disconn.close()
+    
+    @commands.command()
+    @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin")
+    async def viewflips(self, ctx):
+        try:
+            coinflipchanid = 519315014490914816
+            channelCheck = self.bot.get_channel(coinflipchanid)
+            if (ctx.channel != channelCheck):
+                await ctx.send(f"Please run this in <#{coinflipchanid}>")
+                return
+            
+            curFlips = await GamblingCog.getCurFlips(self,ctx,True)
+            data = ""
+            if curFlips:
+                for x in curFlips:
+                    data += f"{x}\n"
+
+                embed = discord.Embed(
+                    title=f"Current Flips \U0001f911", colour=discord.Colour(0xFF00FF))
+                embed.set_footer(text="PGServerManager | TwiSt#2791")
+                embed.add_field(name=f"Data:",
+                                value=data, inline=False)
+                await ctx.send(embed=embed)
+            else:
+                await ctx.send(f"{ctx.author.mention} there are no active flips")
+        except Exception as e:
+            await ctx.send(e)
+    
+    @commands.command()
+    @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin")
+    async def joinflip(self, ctx, channel: discord.TextChannel):
+        try:
+            disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
+            discur = await disconn.cursor(aiomysql.DictCursor)
+
+            coinflipchanid = 519315014490914816
+            channelCheck = self.bot.get_channel(coinflipchanid)
+            if (ctx.channel != channelCheck):
+                await ctx.send(f"Please run this in <#{coinflipchanid}>")
+                return
+            
+            savedFlips = await GamblingCog.getCurFlips(self, ctx)
+            amount = savedFlips.get(channel.id)[0]
+            if not savedFlips:
+                await ctx.send("No open flips")
+                return
+            
+            curFlips = await GamblingCog.getCurFlips(self, ctx)
+            try:
+                tempVar = curFlips[channel.id]
+            except Exception as e:
+                await ctx.send(e)
+                await ctx.send("Could not find that flip channel")
+                return
+            
+            if savedFlips.get(channel.id)[1] != ctx.author.id:
+                if await GamblingCog.check_id(self, ctx.author):
+                    await discur.execute('SELECT Balance FROM users WHERE DiscordID = %s;', (ctx.author.id,))
+                    curBal = await asyncio.gather(discur.fetchone())
+                    curBal = curBal[0]['Balance']
+
+                    if curBal >= amount:
+                        await discur.execute('UPDATE users SET Balance = Balance - %s WHERE DiscordID = %s;', (amount, ctx.author.id))
+                        await ctx.send(f"Starting flip! Head to <#{channel.id}>")
+                        await GamblingCog.addtoflip(self, ctx, channel, amount)
+                        return
+                    else:
+                        await ctx.send(f"{ctx.author.mention} does not have enough in their balance to join the flip!")
+                        return
+            else:
+                await ctx.send(f"{ctx.author.mention} tried to join <#{channel.id}> which is their own flip!")
+        except Exception as e:
+            await ctx.send(e)
+            await ctx.send("Flip not found.")
+        finally:
+            disconn.close()
+    
     @commands.command()
     async def deposit(self, ctx, amount: typing.Union[int, str]):
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
