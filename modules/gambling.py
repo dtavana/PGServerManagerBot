@@ -316,7 +316,6 @@ class GamblingCog:
         disconn.close()
 
     @commands.command(aliases=['coinflip'])
-    @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin")
     async def startflip(self, ctx, amount: typing.Union[int, str]):
         try:
             disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
@@ -368,7 +367,6 @@ class GamblingCog:
             disconn.close()
     
     @commands.command()
-    @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin")
     async def viewflips(self, ctx):
         try:
             coinflipchanid = 519315014490914816
@@ -395,7 +393,6 @@ class GamblingCog:
             await ctx.send(e)
     
     @commands.command()
-    @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin")
     async def joinflip(self, ctx, channel: discord.TextChannel):
         try:
             disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
