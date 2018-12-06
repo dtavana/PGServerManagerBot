@@ -53,6 +53,7 @@ class GamblingCog:
             channel = await ctx.guild.create_text_channel(channelName, category=category)
             await discur.execute("INSERT INTO coinflip (DiscordID, ChannelID, Amount) VALUES (%s, %s, %s);", (ctx.author.id, channel.id, amount))
             await channel.set_permissions(ctx.author, read_messages=True, send_messages=True)
+            await ctx.send(f"You have started a flip in <#{channel.id}>")
             await ctx.send(f"{ctx.author.mention} waiting for 1 other player to join your flip channel.")
             await channel.send(f"This flip is for {amount} Coins.")
         except Exception as e:
@@ -350,6 +351,13 @@ class GamblingCog:
                 if amount < 5000:
                     await ctx.send(f"{ctx.author.mention} minimum amount for a coinflip is 5000!")
                     return
+                '''
+                if amount > 10000000 and amount == "max":
+                    amount = 10000000
+                elif amount > 10000000:
+                    await ctx.send(f"{ctx.author.mention} maximum amount for a coinflip is 10000000!")
+                    return
+                '''
                 
                 await GamblingCog.createFlipChannel(self, ctx, amount)
                 await discur.execute('UPDATE users SET Balance = Balance - %s WHERE DiscordID = %s;', (amount, ctx.author.id))
@@ -358,7 +366,13 @@ class GamblingCog:
                 newBal = await asyncio.gather(discur.fetchone())
                 newBal = newBal[0]['Balance']
             else:
-                await ctx.send(f"The DiscordUser: {ctx.author.mention} is not registered. Please create a ticket with your SteamID in the subject!")
+                embed = discord.Embed(
+                    title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
+                embed.set_footer(text="PGServerManager | TwiSt#2791")
+                embed.add_field(
+                    name="Error:", value=f"The Discord Account {ctx.author.mention} is currently not registered!\n"
+                    f"Please make a ticket as follows : `-new registration INSERTSTEAM64ID`", inline=False)
+                await ctx.send(embed=embed)
                 return
 
         except Exception as e:
@@ -432,6 +446,14 @@ class GamblingCog:
                     else:
                         await ctx.send(f"{ctx.author.mention} does not have enough in their balance to join the flip!")
                         return
+                else:
+                    embed = discord.Embed(
+                        title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
+                    embed.set_footer(text="PGServerManager | TwiSt#2791")
+                    embed.add_field(
+                        name="Error:", value=f"The Discord Account {ctx.author.mention} is currently not registered!\n"
+                        f"Please make a ticket as follows : `-new registration INSERTSTEAM64ID`", inline=False)
+                    await ctx.send(embed=embed)
             else:
                 await ctx.send(f"{ctx.author.mention} tried to join <#{channel.id}> which is their own flip!")
         except Exception as e:
