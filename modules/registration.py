@@ -194,7 +194,7 @@ class RegistrationCog:
                 # Open Connection
                 disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
                 discur = await disconn.cursor(aiomysql.DictCursor)
-                await discur.execute('UPDATE users SET PlayerUID = %s WHERE DiscordID = %s;', (steamid, plsyer.id))
+                await discur.execute('UPDATE users SET PlayerUID = %s WHERE DiscordID = %s;', (steamid, player.id))
                 embed = discord.Embed(
                     title=f"**Success** \U00002705", colour=discord.Colour(0x32CD32))
                 embed.set_footer(text="PGServerManager | TwiSt#2791")
