@@ -3,6 +3,7 @@ import discord
 import asyncio
 import aiomysql
 from discord.ext import commands
+from discord.ext.commands.cooldowns import BucketType
 import traceback
 
 #Misc. Modules
@@ -61,7 +62,7 @@ class GamblingCog:
         finally:
             disconn.close()
 
-    async def getCurFlips(self, ctx, type = False):
+    async def getCurFlips(self, ctx, type=False):
         try:
             disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
             discur = await disconn.cursor(aiomysql.DictCursor)
@@ -70,7 +71,8 @@ class GamblingCog:
             curFlips = await asyncio.gather(discur.fetchall())
             curFlips = curFlips[0]
             for x in curFlips:
-                savedFlips[int (x['ChannelID'])] = [x['Amount'], int(x['DiscordID'])]
+                savedFlips[int(x['ChannelID'])] = [
+                    x['Amount'], int(x['DiscordID'])]
             if type:
                 channelStrings = []
                 for x in ctx.guild.channels:
@@ -84,8 +86,7 @@ class GamblingCog:
             await ctx.send(e)
         finally:
             disconn.close()
-        
-    
+
     async def addtoflip(self, ctx, channel, amount):
         try:
             disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
@@ -95,7 +96,7 @@ class GamblingCog:
             origUser = origUser[0]
             origUser = origUser['DiscordID']
             await discur.execute("DELETE FROM coinflip WHERE ChannelID = %s;", (channel.id,))
-           
+
             await channel.set_permissions(ctx.author, read_messages=True, send_messages=True)
             await channel.send("Starting coinflip!")
             await channel.send("Calculating winner...")
@@ -106,7 +107,7 @@ class GamblingCog:
                 winner = ctx.guild.get_member(int(origUser))
             else:
                 winner = ctx.guild.get_member(ctx.author.id)
-            
+
             await channel.send("And the winner is...")
             await asyncio.sleep(3)
             await channel.send(f"{winner.mention}")
@@ -118,7 +119,10 @@ class GamblingCog:
             curBal = curBal[0]['Balance']
             await channel.send(f"{winner.mention}'s new balance is **{curBal}**")
             await channel.send("Deleting channel in 30 seconds")
-            await winner.send(f"You won your coinflip for {amount} coins!")
+            try:
+                await winner.send(f"You won your coinflip for {amount} coins!")
+            except:
+                pass
             await asyncio.sleep(30)
             await channel.delete()
         except Exception as e:
@@ -220,7 +224,7 @@ class GamblingCog:
                     data += (f"{key} |  **{value}%**\n")
 
             embed = discord.Embed(
-                title=f"Current Bets \U0001f911", colour=discord.Colour(0xFF00FF))
+                title=f"Current Pot **${curTotal}** \U0001f911", colour=discord.Colour(0xFF00FF))
             embed.set_footer(text="PGServerManager | TwiSt#2791")
             embed.add_field(name=f"Data:",
                             value=data, inline=False)
@@ -317,6 +321,7 @@ class GamblingCog:
         disconn.close()
 
     @commands.command(aliases=['coinflip'])
+    @commands.cooldown(1, 5, BucketType.user)
     async def startflip(self, ctx, amount: typing.Union[int, str]):
         try:
             disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
@@ -326,8 +331,9 @@ class GamblingCog:
             channelCheck = self.bot.get_channel(coinflipchanid)
             if (ctx.channel != channelCheck):
                 await ctx.send(f"Please run this in <#{coinflipchanid}>")
+                self.bot.get_command("startflip").reset_cooldown(ctx)
                 return
-            
+
             if await GamblingCog.check_id(self, ctx.author):
                 await discur.execute("SELECT COUNT(IF (DiscordID = %s, 1, NULL)) AS numFlips FROM coinflip;", (ctx.author.id,))
                 numFlips = await asyncio.gather(discur.fetchone())
@@ -346,10 +352,12 @@ class GamblingCog:
                     pass
                 else:
                     await ctx.send(f"{ctx.author.mention} does not have enough coins in their balance to start a coinflip of {amount}")
+                    self.bot.get_command("startflip").reset_cooldown(ctx)
                     return
-                
+
                 if amount < 5000:
                     await ctx.send(f"{ctx.author.mention} minimum amount for a coinflip is 5000!")
+                    self.bot.get_command("startflip").reset_cooldown(ctx)
                     return
                 '''
                 if amount > 10000000 and amount == "max":
@@ -358,10 +366,10 @@ class GamblingCog:
                     await ctx.send(f"{ctx.author.mention} maximum amount for a coinflip is 10000000!")
                     return
                 '''
-                
+
                 await GamblingCog.createFlipChannel(self, ctx, amount)
                 await discur.execute('UPDATE users SET Balance = Balance - %s WHERE DiscordID = %s;', (amount, ctx.author.id))
-                
+
                 await discur.execute('SELECT Balance FROM users WHERE DiscordID = %s;', (ctx.author.id,))
                 newBal = await asyncio.gather(discur.fetchone())
                 newBal = newBal[0]['Balance']
@@ -373,13 +381,14 @@ class GamblingCog:
                     name="Error:", value=f"The Discord Account {ctx.author.mention} is currently not registered!\n"
                     f"Please make a ticket as follows : `-new registration INSERTSTEAM64ID`", inline=False)
                 await ctx.send(embed=embed)
+                self.bot.get_command("startflip").reset_cooldown(ctx)
                 return
 
         except Exception as e:
             await ctx.send(e)
         finally:
             disconn.close()
-    
+
     @commands.command()
     async def viewflips(self, ctx):
         try:
@@ -388,8 +397,8 @@ class GamblingCog:
             if (ctx.channel != channelCheck):
                 await ctx.send(f"Please run this in <#{coinflipchanid}>")
                 return
-            
-            curFlips = await GamblingCog.getCurFlips(self,ctx,True)
+
+            curFlips = await GamblingCog.getCurFlips(self, ctx, True)
             data = ""
             if curFlips:
                 for x in curFlips:
@@ -405,8 +414,9 @@ class GamblingCog:
                 await ctx.send(f"{ctx.author.mention} there are no active flips")
         except Exception as e:
             await ctx.send(e)
-    
+
     @commands.command()
+    @commands.cooldown(1, 5, BucketType.user)
     async def joinflip(self, ctx, channel: discord.TextChannel):
         try:
             disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
@@ -416,22 +426,25 @@ class GamblingCog:
             channelCheck = self.bot.get_channel(coinflipchanid)
             if (ctx.channel != channelCheck):
                 await ctx.send(f"Please run this in <#{coinflipchanid}>")
+                self.bot.get_command("joinflip").reset_cooldown(ctx)
                 return
-            
+
             savedFlips = await GamblingCog.getCurFlips(self, ctx)
             amount = savedFlips.get(channel.id)[0]
             if not savedFlips:
                 await ctx.send("No open flips")
+                self.bot.get_command("joinflip").reset_cooldown(ctx)
                 return
-            
+
             curFlips = await GamblingCog.getCurFlips(self, ctx)
             try:
                 tempVar = curFlips[channel.id]
             except Exception as e:
                 await ctx.send(e)
                 await ctx.send("Could not find that flip channel")
+                self.bot.get_command("joinflip").reset_cooldown(ctx)
                 return
-            
+
             if savedFlips.get(channel.id)[1] != ctx.author.id:
                 if await GamblingCog.check_id(self, ctx.author):
                     await discur.execute('SELECT Balance FROM users WHERE DiscordID = %s;', (ctx.author.id,))
@@ -445,6 +458,7 @@ class GamblingCog:
                         return
                     else:
                         await ctx.send(f"{ctx.author.mention} does not have enough in their balance to join the flip!")
+                        self.bot.get_command("joinflip").reset_cooldown(ctx)
                         return
                 else:
                     embed = discord.Embed(
@@ -454,15 +468,18 @@ class GamblingCog:
                         name="Error:", value=f"The Discord Account {ctx.author.mention} is currently not registered!\n"
                         f"Please make a ticket as follows : `-new registration INSERTSTEAM64ID`", inline=False)
                     await ctx.send(embed=embed)
+                    self.bot.get_command("joinflip").reset_cooldown(ctx)
             else:
                 await ctx.send(f"{ctx.author.mention} tried to join <#{channel.id}> which is their own flip!")
+                self.bot.get_command("joinflip").reset_cooldown(ctx)
         except Exception as e:
-            await ctx.send(e)
             await ctx.send("Flip not found.")
+            self.bot.get_command("joinflip").reset_cooldown(ctx)
         finally:
             disconn.close()
-    
+
     @commands.command()
+    @commands.cooldown(1, 5, BucketType.user)
     async def deposit(self, ctx, amount: typing.Union[int, str]):
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
@@ -488,6 +505,7 @@ class GamblingCog:
                 await ctx.send(f"{ctx.author.mention} does not have enough coins in their bank to add {amount} to their balance")
                 dzconn.close()
                 disconn.close()
+                self.bot.get_command("deposit").reset_cooldown(ctx)
                 return
 
             '''
@@ -524,6 +542,7 @@ class GamblingCog:
                     await ctx.send(f"An error has occurred. {ctx.author.mention}'s coins have not changed")
                     dzconn.close()
                     disconn.close()
+                    self.bot.get_command("deposit").reset_cooldown(ctx)
                     return
 
                 embed = discord.Embed(
@@ -536,6 +555,7 @@ class GamblingCog:
                 await GamblingCog.gamblelog(self, ctx, newBal, "Withdraw")
                 dzconn.close()
                 disconn.close()
+                self.bot.get_command("deposit").reset_cooldown(ctx)
                 return
             else:
                 # User was in game
@@ -547,14 +567,17 @@ class GamblingCog:
                 await ctx.send(embed=embed)
                 dzconn.close()
                 disconn.close()
+                self.bot.get_command("deposit").reset_cooldown(ctx)
                 return
         else:
             await ctx.send(f"The DiscordUser: {ctx.author.mention} is not registered. Please create a ticket with your SteamID in the subject!")
             dzconn.close()
             disconn.close()
+            self.bot.get_command("deposit").reset_cooldown(ctx)
             return
 
     @commands.command(aliases=['claim'])
+    @commands.cooldown(1, 5, BucketType.user)
     async def withdraw(self, ctx, amount: typing.Union[int, str]):
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
@@ -576,6 +599,7 @@ class GamblingCog:
                     await ctx.send(f"{ctx.author.mention}'s current balance is 0!")
                     disconn.close()
                     dzconn.close()
+                    self.bot.get_command("withdraw").reset_cooldown(ctx)
                     return
 
                 if (amount == "all"):
@@ -585,6 +609,7 @@ class GamblingCog:
                     await ctx.send(f"{ctx.author.mention} can not withdraw {amount} coins as it is over their current balance of {curBal}")
                     dzconn.close()
                     disconn.close()
+                    self.bot.get_command("withdraw").reset_cooldown(ctx)
                     return
 
                 result = await GamblingCog.bankcheck(self, ctx, steamid)
@@ -594,6 +619,7 @@ class GamblingCog:
                         await ctx.send(f"{ctx.author.mention}'s current BankCoins is {origCoins}")
                         dzconn.close()
                         disconn.close()
+                        self.bot.get_command("withdraw").reset_cooldown(ctx)
                         return
                 elif (result == 1):
                     if (origCoins + amount > 10000000):
@@ -601,6 +627,7 @@ class GamblingCog:
                         await ctx.send(f"{ctx.author.mention}'s current BankCoins is {origCoins}")
                         dzconn.close()
                         disconn.close()
+                        self.bot.get_command("withdraw").reset_cooldown(ctx)
                         return
                 elif (result == 0):
                     if (origCoins + amount > 5000000):
@@ -608,6 +635,7 @@ class GamblingCog:
                         await ctx.send(f"{ctx.author.mention}'s current BankCoins is {origCoins}")
                         dzconn.close()
                         disconn.close()
+                        self.bot.get_command("withdraw").reset_cooldown(ctx)
                         return
 
                 # Perform the query
@@ -642,14 +670,17 @@ class GamblingCog:
                 embed.set_footer(text="PGServerManager | TwiSt#2791")
                 embed.add_field(
                     name="Error:", value=f"The STEAM64ID bound to {ctx.author.mention} ({steamid}) is currently in game")
+                self.bot.get_command("withdraw").reset_cooldown(ctx)
                 await ctx.send(embed=embed)
         else:
             #User is not registered
             await ctx.send(f"The DiscordUser: {ctx.author.mention} is not registered. Please create a ticket with your SteamID in the subject!")
+            self.bot.get_command("withdraw").reset_cooldown(ctx)
         disconn.close()
         dzconn.close()
 
     @commands.command(aliases=['bet'])
+    @commands.cooldown(1, 5, BucketType.user)
     async def jackpot(self, ctx, amount: typing.Union[int, str]):
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
         discur = await disconn.cursor(aiomysql.DictCursor)
@@ -658,6 +689,7 @@ class GamblingCog:
         channel = self.bot.get_channel(jackpotchanid)
         if (ctx.channel != channel):
             await ctx.send(f"Please run this in <#{jackpotchanid}>")
+            self.bot.get_command("jackpot").reset_cooldown(ctx)
             disconn.close()
             return
 
@@ -678,11 +710,13 @@ class GamblingCog:
         if(type(amount) is int):
             if (amount < 5000):
                 await ctx.send(f"{ctx.author.mention} needs to bet at least 5000 coins!")
+                self.bot.get_command("jackpot").reset_cooldown(ctx)
                 disconn.close()
                 return
 
             if(amount > maxBet):
                 await ctx.send(f"{ctx.author.mention} can not bet over 10000000 coins in one pot!")
+                self.bot.get_command("jackpot").reset_cooldown(ctx)
                 disconn.close()
                 return
 
@@ -703,10 +737,12 @@ class GamblingCog:
                 curPot = await asyncio.gather(discur.fetchall())
                 if self.openpot == False:
                     await ctx.send("The pot currently is not open try again in a minute!")
+                    self.bot.get_command("jackpot").reset_cooldown(ctx)
                     disconn.close()
                     return
                 if(len(curPot[0]) == 1 and (curPot[0][0]['DiscordUser'] == str(ctx.author))):
                     await ctx.send("Wait until another user goes in before going in again")
+                    self.bot.get_command("jackpot").reset_cooldown(ctx)
                     disconn.close()
                     return
                 await discur.execute('INSERT INTO jackpot (DiscordUser, DiscordID, Amount) VALUES (%s,%s,%s);', (str(ctx.author), ctx.author.id, amount))
@@ -757,6 +793,7 @@ class GamblingCog:
                     await ctx.send(embed=embed)
                     # Close the connections
                     disconn.close()
+                    self.bot.get_command("jackpot").reset_cooldown(ctx)
                     return
             else:
                 # Not enough Coins
@@ -768,6 +805,7 @@ class GamblingCog:
                 await ctx.send(embed=embed)
                 # Close the connections
                 disconn.close()
+                self.bot.get_command("jackpot").reset_cooldown(ctx)
                 return
         else:
             # User not registed
@@ -780,17 +818,21 @@ class GamblingCog:
             await ctx.send(embed=embed)
             # Close the connections
             disconn.close()
+            self.bot.get_command("jackpot").reset_cooldown(ctx)
             return
         disconn.close()
 
     @commands.command(aliases=['wiretransfer'])
+    @commands.cooldown(1, 5, BucketType.user)
     async def transfer(self, ctx, user: discord.Member, amount: int):
         if ctx.author == user:
             await ctx.send(f"{ctx.author.mention} can not transfer to themselves")
+            self.bot.get_command("transfer").reset_cooldown(ctx)
             return
 
         if amount < 1:
             await ctx.send(f"{ctx.author.mention} used an invalid transfer amount of {amount}")
+            self.bot.get_command("transfer").reset_cooldown(ctx)
             return
 
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
@@ -857,6 +899,7 @@ class GamblingCog:
                     await ctx.send(embed=embed)
                     # Close the connections
                     disconn.close()
+                    self.bot.get_command("transfer").reset_cooldown(ctx)
                     return
             else:
                 # Not enough Coins
@@ -868,6 +911,7 @@ class GamblingCog:
                 await ctx.send(embed=embed)
                 # Close the connections
                 disconn.close()
+                self.bot.get_command("transfer").reset_cooldown(ctx)
                 return
         else:
             # User not registed
@@ -885,8 +929,25 @@ class GamblingCog:
             await ctx.send(embed=embed)
             # Close the connections
             disconn.close()
+            self.bot.get_command("transfer").reset_cooldown(ctx)
             return
         disconn.close()
+
+    @startflip.error
+    @joinflip.error
+    @deposit.error
+    @withdraw.error
+    @transfer.error
+    @jackpot.error
+    async def gambling_handler(self, ctx, error):
+        import traceback
+        traceback.print_exception(type(error), error, error.__traceback__)
+        if isinstance(error, commands.CommandOnCooldown):
+            seconds = error.retry_after
+            seconds = round(seconds, 2)
+            hours, remainder = divmod(int(seconds), 3600)
+            minutes, seconds = divmod(remainder, 60)
+            await ctx.send(f"You are on cooldown! Please try again in **{seconds} seconds**")
 
 
 def setup(bot):
