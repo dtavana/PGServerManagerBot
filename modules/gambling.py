@@ -585,6 +585,7 @@ class GamblingCog:
         dzcur = await dzconn.cursor(aiomysql.DictCursor)
 
         curPlayers = await GamblingCog.currentplayers(self, ctx)
+
         if await GamblingCog.check_id(self, ctx.author):
             steamid = await GamblingCog.get_steamid(self, ctx.author)
             if (steamid not in curPlayers):
@@ -822,17 +823,17 @@ class GamblingCog:
             return
         disconn.close()
 
-    @commands.command(aliases=['wiretransfer'])
+    @commands.command(aliases=['wiretransfercoins'])
     @commands.cooldown(1, 5, BucketType.user)
-    async def transfer(self, ctx, user: discord.Member, amount: int):
+    async def transfercoins(self, ctx, user: discord.Member, amount: int):
         if ctx.author == user:
             await ctx.send(f"{ctx.author.mention} can not transfer to themselves")
-            self.bot.get_command("transfer").reset_cooldown(ctx)
+            self.bot.get_command("transfercoins").reset_cooldown(ctx)
             return
 
         if amount < 1:
             await ctx.send(f"{ctx.author.mention} used an invalid transfer amount of {amount}")
-            self.bot.get_command("transfer").reset_cooldown(ctx)
+            self.bot.get_command("transfercoins").reset_cooldown(ctx)
             return
 
         disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
@@ -886,9 +887,6 @@ class GamblingCog:
                     embed.add_field(
                         name="Data:", value=f"{ctx.author.mention} gave {user.mention} **{amount} Coins**!")
                     await ctx.send(embed=embed)
-                    # await GamblingCog.gamblelog(self, ctx, amount, "Jackpot")
-                    # Start the countdown with 2 players
-
                 else:
                     # Coins didn't change
                     embed = discord.Embed(
@@ -899,7 +897,7 @@ class GamblingCog:
                     await ctx.send(embed=embed)
                     # Close the connections
                     disconn.close()
-                    self.bot.get_command("transfer").reset_cooldown(ctx)
+                    self.bot.get_command("transfercoins").reset_cooldown(ctx)
                     return
             else:
                 # Not enough Coins
@@ -911,7 +909,7 @@ class GamblingCog:
                 await ctx.send(embed=embed)
                 # Close the connections
                 disconn.close()
-                self.bot.get_command("transfer").reset_cooldown(ctx)
+                self.bot.get_command("transfercoins").reset_cooldown(ctx)
                 return
         else:
             # User not registed
@@ -929,15 +927,144 @@ class GamblingCog:
             await ctx.send(embed=embed)
             # Close the connections
             disconn.close()
-            self.bot.get_command("transfer").reset_cooldown(ctx)
+            self.bot.get_command("transfercoins").reset_cooldown(ctx)
             return
         disconn.close()
+
+    @commands.command(aliases=['wiretransferxp'])
+    @commands.cooldown(1, 5, BucketType.user)
+    async def transferxp(self, ctx, user: discord.Member, amount: int):
+        if ctx.author == user:
+            await ctx.send(f"{ctx.author.mention} can not transfer to themselves")
+            self.bot.get_command("transferxp").reset_cooldown(ctx)
+            return
+
+        if amount < 1:
+            await ctx.send(f"{ctx.author.mention} used an invalid transfer amount of {amount}")
+            self.bot.get_command("transferxo").reset_cooldown(ctx)
+            return
+
+        dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
+        dzcur = await dzconn.cursor(aiomysql.DictCursor)
+
+        if await GamblingCog.check_id(self, ctx.author) and await GamblingCog.check_id(self, user):
+            '''
+            embed = discord.Embed(
+                title=f"ReactToConfirm \U0001f4b1", colour=discord.Colour(0xFFA500))
+            embed.set_footer(text="PGServerManager | TwiSt#2791")
+            embed.add_field(name="**Transfer:**", value=f"{user.mention}")
+            embed.add_field(name="**Amount:**", value=f"`{amount}`")
+            message = await ctx.author.send(embed=embed)
+            await message.add_reaction("\U0001f44d")
+            await message.add_reaction("\U0001f44e")
+
+            def reactioncheck(reaction, member):
+                validreactions = ["\U0001f44d", "\U0001f44e"]
+                return member.id == ctx.author.id and reaction.emoji in validreactions
+            reaction, member = await self.bot.wait_for('reaction_add', check=reactioncheck, timeout=30)
+            # Check if thumbs up
+            if reaction.emoji != "\U0001f44d":
+                await ctx.author.send("Command cancelled")
+                disconn.close()
+                return
+            '''
+            # Get starting values
+            steamid = await GamblingCog.get_steamid(self, ctx.author)
+            receiversteamid = await GamblingCog.get_steamid(self, user)
+            curPlayers = await GamblingCog.currentplayers(self, ctx)
+            if steamid not in curPlayers and receiversteamid not in curPlayers:
+                await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
+                curBalDonator = await asyncio.gather(dzcur.fetchone())
+                curBalDonator = curBalDonator[0]['XP']
+                await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (receiversteamid,))
+                curBalReceiver = await asyncio.gather(dzcur.fetchone())
+                curBalReceiver = curBalReceiver[0]['XP']
+                # Check if they have enough
+                if(curBalDonator and (curBalDonator >= amount)):
+                    # Remove xp
+                    await dzcur.execute('UPDATE xpsystem SET XP = XP - %s WHERE PlayerUID = %s;', (amount, steamid))
+                    await dzcur.execute('UPDATE xpsystem SET XP = XP + %s WHERE PlayerUID = %s;', (amount, receiversteamid))
+
+                    await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (steamid,))
+                    newBalDonator = await asyncio.gather(dzcur.fetchone())
+                    newBalDonator = newBalDonator[0]['XP']
+                    await dzcur.execute('SELECT XP FROM xpsystem WHERE PlayerUID = %s;', (receiversteamid,))
+                    newBalReceiver = await asyncio.gather(dzcur.fetchone())
+                    newBalReceiver = newBalReceiver[0]['XP']
+
+                    if newBalDonator != curBalDonator and newBalReceiver != curBalReceiver:
+                        embed = discord.Embed(
+                            title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
+                        embed.set_footer(text="PGServerManager | TwiSt#2791")
+                        embed.add_field(
+                            name="Data:", value=f"{ctx.author.mention} gave {user.mention} **{amount} XP**!")
+                        await ctx.send(embed=embed)
+
+                    else:
+                        # Coins didn't change
+                        embed = discord.Embed(
+                            title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
+                        embed.set_footer(text="PGServerManager | TwiSt#2791")
+                        embed.add_field(
+                            name="Error:", value=f"{ctx.author.mention}, an error has occured. Please screenshot this and make a ticket")
+                        await ctx.send(embed=embed)
+                        # Close the connections
+                        dzcur.close()
+                        self.bot.get_command("transferxp").reset_cooldown(ctx)
+                        return
+                else:
+                    # Not enough Coins
+                    embed = discord.Embed(
+                        title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
+                    embed.set_footer(text="PGServerManager | TwiSt#2791")
+                    embed.add_field(
+                        name="Error:", value=f"{ctx.author.mention} does not have enough XP for this transfer!")
+                    await ctx.send(embed=embed)
+                    # Close the connections
+                    dzcur.close()
+                    self.bot.get_command("transferxp").reset_cooldown(ctx)
+                    return
+            else:
+                # User was in game
+                embed = discord.Embed(
+                    title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
+                embed.set_footer(text="PGServerManager | TwiSt#2791")
+                if steamid in curPlayers:
+                    embed.add_field(
+                        name="Error:", value=f"The STEAM64ID bound to {ctx.author.mention} ({steamid}) is currently in game")
+                else:
+                    embed.add_field(
+                        name="Error:", value=f"The STEAM64ID bound to {user.mention} ({receiversteamid}) is currently in game")
+                await ctx.send(embed=embed)
+                dzconn.close()
+                self.bot.get_command("transferxp").reset_cooldown(ctx)
+                return
+        else:
+            # User not registed
+            embed = discord.Embed(
+                title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
+            embed.set_footer(text="PGServerManager | TwiSt#2791")
+            if not (await GamblingCog.check_id(self, ctx.author)):
+                embed.add_field(
+                    name="Error:", value=f"The Discord Account {ctx.author.mention} is currently not registered!\n"
+                    f"Please make a ticket as follows : `-new registration INSERTSTEAM64ID`", inline=False)
+            else:
+                embed.add_field(
+                    name="Error:", value=f"The Discord Account {user.mention} is currently not registered!\n"
+                    f"Please make a ticket as follows : `-new registration INSERTSTEAM64ID`", inline=False)
+            await ctx.send(embed=embed)
+            # Close the connections
+            dzcur.close()
+            self.bot.get_command("transferxp").reset_cooldown(ctx)
+            return
+        dzcur.close()
 
     @startflip.error
     @joinflip.error
     @deposit.error
     @withdraw.error
-    @transfer.error
+    @transfercoins.error
+    @transferxp.error
     @jackpot.error
     async def gambling_handler(self, ctx, error):
         import traceback
