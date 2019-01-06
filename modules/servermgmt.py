@@ -11,6 +11,7 @@ import config as cfg
 import os
 import subprocess
 import ast
+from file_read_backwards import FileReadBackwards
 
 
 class ServerManagementCog:
@@ -330,6 +331,21 @@ class ServerManagementCog:
         embed.add_field(name=f"Current RPT:", value=f"It is below")
         await ctx.author.send(embed=embed)
         await ctx.author.send(file=discord.File("C:\\Cherno_Main\\DZE_Server_Config\\arma2oaserver.rpt"))
+    
+    @commands.command()
+    @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin", "Admin")
+    async def serverfps(self, ctx):
+        with FileReadBackwards("C:\\Cherno_Main\\DZE_Server_Config\\arma2oaserver.rpt", encoding="utf-8") as ServerRPT:
+            for line in ServerRPT:
+                if "SERVER FPS" in line:
+                    embed = discord.Embed(
+                        title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
+                    embed.set_footer(text="PGServerManager | TwiSt#2791")
+                    embed.add_field(
+                        name="Data:", value=f"`{line}`")
+                    await ctx.send(embed=embed)
+                    return
+
     
     @commands.command()
     @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin", "Admin")
