@@ -90,7 +90,7 @@ class RegistrationCog:
         disconn.close()
     '''
 	
-    @commands.command(aliases=['register'])
+    @commands.command()
     @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin")
     async def adduser(self, ctx, player: discord.Member):
         try:
@@ -209,6 +209,38 @@ class RegistrationCog:
             await ctx.send(f'```py\n{traceback.format_exc()}\n```')
         # Close Connection
         disconn.close()
+    
+    @commands.command()
+    async def register(self, ctx):
+        try:
+            disconn = await aiomysql.connect(host=cfg.dishost, port=cfg.disport, user=cfg.disuser, password=cfg.dispass, db=cfg.disschema, autocommit=True)
+            discur = await disconn.cursor(aiomysql.DictCursor)
+            if not (await RegistrationCog.check_id(self, ctx.author)):
+                await ctx.author.send("Please visit the following link to log in!")
+                await ctx.author.send(f"http://pgapplications.xyz:3000/auth/steam?id={ctx.author.id}")
+                await ctx.author.send("You have one minute to visit this link.")
+                await discur.execute(f"INSERT INTO authqueue (DiscordID, PlayerUID, Status) VALUES ({ctx.author.id}, 0, 0);")
+                endTime = datetime.datetime.now() + datetime.timedelta(minutes=1)
+                while datetime.datetime.now() < endTime:
+                    await discur.execute(f"SELECT PlayerUID FROM authqueue WHERE DiscordID = {ctx.author.id} AND Status = 1;")
+                    data = await asyncio.gather(discur.fetchone())
+                    if data[0]:
+                        await ctx.author.send("Thank you for registering! You may now use all bot commands.")
+                        steamid = data[0]["PlayerUID"]
+                        await discur.execute('INSERT INTO users (DiscordUser, PlayerUID, DiscordID) VALUES (%s,%s,%s);', (str(ctx.author), steamid, ctx.author.id))
+                        await discur.execute(f"DELETE FROM authqueue WHERE DiscordID = {ctx.author.id};")
+                        return
+                    else:
+                        await asyncio.sleep(1)
+                await ctx.author.send("Could not receive any authentication. Please try again.")
+                await discur.execute(f"DELETE FROM authqueue WHERE DiscordID = {ctx.author.id};")
+
+            else:
+                await ctx.author.send(f"You are already registered")
+        except:
+            print("geh")
+        finally:
+            disconn.close()
 
 
 def setup(bot):

@@ -379,7 +379,7 @@ class GamblingCog:
                 embed.set_footer(text="PGServerManager | TwiSt#2791")
                 embed.add_field(
                     name="Error:", value=f"The Discord Account {ctx.author.mention} is currently not registered!\n"
-                    f"Please make a ticket as follows : `-new registration INSERTSTEAM64ID`", inline=False)
+                    "Please use the following command `pg register`", inline=False)
                 await ctx.send(embed=embed)
                 self.bot.get_command("startflip").reset_cooldown(ctx)
                 return
@@ -466,7 +466,7 @@ class GamblingCog:
                     embed.set_footer(text="PGServerManager | TwiSt#2791")
                     embed.add_field(
                         name="Error:", value=f"The Discord Account {ctx.author.mention} is currently not registered!\n"
-                        f"Please make a ticket as follows : `-new registration INSERTSTEAM64ID`", inline=False)
+                        "Please use the following command `pg register`", inline=False)
                     await ctx.send(embed=embed)
                     self.bot.get_command("joinflip").reset_cooldown(ctx)
             else:
@@ -815,7 +815,7 @@ class GamblingCog:
             embed.set_footer(text="PGServerManager | TwiSt#2791")
             embed.add_field(
                 name="Error:", value=f"The Discord Account {ctx.author.mention} is currently not registered!\n"
-                f"Please make a ticket as follows : `-new registration INSERTSTEAM64ID`", inline=False)
+                "Please use the following command `pg register`", inline=False)
             await ctx.send(embed=embed)
             # Close the connections
             disconn.close()
@@ -919,11 +919,11 @@ class GamblingCog:
             if not (await GamblingCog.check_id(self, ctx.author)):
                 embed.add_field(
                     name="Error:", value=f"The Discord Account {ctx.author.mention} is currently not registered!\n"
-                    f"Please make a ticket as follows : `-new registration INSERTSTEAM64ID`", inline=False)
+                    "Please use the following command `pg register`", inline=False)
             else:
                 embed.add_field(
                     name="Error:", value=f"The Discord Account {user.mention} is currently not registered!\n"
-                    f"Please make a ticket as follows : `-new registration INSERTSTEAM64ID`", inline=False)
+                    "Please use the following command `pg register`", inline=False)
             await ctx.send(embed=embed)
             # Close the connections
             disconn.close()
@@ -1047,11 +1047,11 @@ class GamblingCog:
             if not (await GamblingCog.check_id(self, ctx.author)):
                 embed.add_field(
                     name="Error:", value=f"The Discord Account {ctx.author.mention} is currently not registered!\n"
-                    f"Please make a ticket as follows : `-new registration INSERTSTEAM64ID`", inline=False)
+                    "Please use the following command `pg register`", inline=False)
             else:
                 embed.add_field(
                     name="Error:", value=f"The Discord Account {user.mention} is currently not registered!\n"
-                    f"Please make a ticket as follows : `-new registration INSERTSTEAM64ID`", inline=False)
+                    "Please use the following command `pg register`", inline=False)
             await ctx.send(embed=embed)
             # Close the connections
             dzcur.close()
