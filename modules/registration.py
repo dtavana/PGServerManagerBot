@@ -220,7 +220,7 @@ class RegistrationCog:
             if not (await RegistrationCog.check_id(self, ctx.author)):
                 await ctx.author.send("Please visit the following link to log in!")
                 await ctx.author.send(f"http://144.217.10.151:3000/auth/steam?id={ctx.author.id}")
-                await ctx.author.send("You have one minute to visit this link.")
+                await ctx.author.send("You have 5 minutes to visit this link.")
                 await discur.execute(f"INSERT INTO authqueue (DiscordID, PlayerUID, Status) VALUES ({ctx.author.id}, 0, 0);")
                 endTime = datetime.datetime.now() + datetime.timedelta(minutes=5)
                 while datetime.datetime.now() < endTime:
