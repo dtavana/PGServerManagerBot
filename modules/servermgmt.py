@@ -12,18 +12,19 @@ import os
 import subprocess
 import ast
 from file_read_backwards import FileReadBackwards
+import ipaddress
 
 
 class ServerManagementCog:
     def __init__(self, bot):
         self.bot = bot
-    
+
     async def validsteamidcheck(self, ctx, steamid):
         if (steamid[:7] == "7656119" and len(steamid) == 17):
             return True
         else:
             return False
-    
+
     async def check_id(self, user: discord.Member):
 
         # Open Connection
@@ -66,7 +67,7 @@ class ServerManagementCog:
 
             notfound = False
 
-            #Object Data
+            # Object Data
             await dzcur.execute('SELECT ObjectUID, ObjectID, Worldspace, Inventory, Classname FROM object_data WHERE LOCATE(%s, Inventory) > 0;', (classname,))
             data = await asyncio.gather(dzcur.fetchall())
             if not data[0]:
@@ -79,7 +80,7 @@ class ServerManagementCog:
                     mags = inventory[1]
                     backpacks = inventory[2]
                     worldspace = x['Worldspace']
-                    
+
                     startuidIndex = worldspace.find('7656')
                     playeruid = worldspace[startuidIndex:startuidIndex + 17]
                     await discur.execute("SELECT DiscordID FROM users WHERE PlayerUID = %s;", (playeruid,))
@@ -90,7 +91,7 @@ class ServerManagementCog:
                         disMember = ctx.guild.get_member(int(did))
                         if disMember is not None:
                             disMemberString = f"**Discord User**: {disMember.mention}\n"
-                    
+
                     worldspace = worldspace[1:]
                     worldspace = worldspace[worldspace.find(
                         '['):worldspace.find(']') + 1]
@@ -128,7 +129,7 @@ class ServerManagementCog:
                                         f"**Object ID**: {oid}\n"
                                         f"**PlayerUID**: {playeruid}\n" + disMemberString, inline=False)
                         await ctx.send(embed=embed)
-            #Garage
+            # Garage
             await dzcur.execute('SELECT PlayerUID, id, DisplayName, Classname, Inventory FROM garage WHERE LOCATE(%s, Inventory) > 0;', (classname,))
             data = await asyncio.gather(dzcur.fetchall())
             if not data[0] and notfound:
@@ -140,7 +141,7 @@ class ServerManagementCog:
                     guns = inventory[0]
                     mags = inventory[1]
                     backpacks = inventory[2]
-                    
+
                     playeruid = x['PlayerUID']
                     await discur.execute("SELECT DiscordID FROM users WHERE PlayerUID = %s;", (playeruid,))
                     did = await asyncio.gather(discur.fetchone())
@@ -150,7 +151,7 @@ class ServerManagementCog:
                         disMember = ctx.guild.get_member(int(did))
                         if disMember is not None:
                             disMemberString = f"**Discord User**: {disMember.mention}\n"
-                        
+
                     gid = x['id']
                     objectclassname = x['Classname']
                     objectdisplayname = x['DisplayName']
@@ -189,11 +190,11 @@ class ServerManagementCog:
         finally:
             dzconn.close()
             disconn.close()
-    
+
     @commands.command()
     @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin")
     async def itemcheck(self, ctx, user, classname: str):
-        try: 
+        try:
             # Open Connection
             dzconn = await aiomysql.connect(host=cfg.dzhost, port=cfg.dzport, user=cfg.dzuser, password=cfg.dzpass, db=cfg.dzschema, autocommit=True)
             dzcur = await dzconn.cursor(aiomysql.DictCursor)
@@ -210,8 +211,8 @@ class ServerManagementCog:
                     await ctx.send(f"Invalid value for user: `{user}` (Must be a **Discord User* or a Valid **STEAM64ID**)")
             else:
                 steamid = user
-            
-            #Object Data
+
+            # Object Data
             await dzcur.execute('SELECT ObjectUID, ObjectID, Worldspace, Inventory, Classname FROM object_data WHERE LOCATE(%s, Worldspace) > 0 AND LOCATE(%s, Inventory) > 0;', (steamid, classname))
             data = await asyncio.gather(dzcur.fetchall())
             if not data[0]:
@@ -225,7 +226,8 @@ class ServerManagementCog:
                     backpacks = inventory[2]
                     worldspace = x['Worldspace']
                     worldspace = worldspace[1:]
-                    worldspace = worldspace[worldspace.find('['):worldspace.find(']') + 1]
+                    worldspace = worldspace[worldspace.find(
+                        '['):worldspace.find(']') + 1]
                     ouid = x['ObjectUID']
                     oid = x['ObjectID']
                     objectclassname = x['Classname']
@@ -251,7 +253,7 @@ class ServerManagementCog:
                         userString = f"**User**: {user.mention}\n"
                     except:
                         userString = f"**User**: {user}\n"
-                    
+
                     embed = discord.Embed(
                         title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
                     embed.set_footer(text="PGServerManager | TwiSt#2791")
@@ -262,9 +264,9 @@ class ServerManagementCog:
                                     f"**Object Classname**: {objectclassname}\n"
                                     f"**Object UID**: {ouid}\n"
                                     f"**Object ID**: {oid}\n" + userString, inline=False)
-                    
+
                     await ctx.send(embed=embed)
-            #Garage
+            # Garage
             await dzcur.execute('SELECT id, DisplayName, Classname, Inventory FROM garage WHERE PlayerUID = %s AND LOCATE(%s, Inventory) > 0;', (steamid, classname))
             data = await asyncio.gather(dzcur.fetchall())
             if not data[0] and notfound:
@@ -319,9 +321,7 @@ class ServerManagementCog:
             await ctx.send(f"{e}")
         finally:
             dzconn.close()
-             
-    
-    
+
     @commands.command()
     @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin", "Admin")
     async def viewchernorpt(self, ctx):
@@ -331,7 +331,7 @@ class ServerManagementCog:
         embed.add_field(name=f"Current RPT:", value=f"It is below")
         await ctx.author.send(embed=embed)
         await ctx.author.send(file=discord.File("C:\\Cherno_Main\\DZE_Server_Config\\arma2oaserver.rpt"))
-    
+
     @commands.command()
     @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin", "Admin")
     async def serverfps(self, ctx):
@@ -346,7 +346,54 @@ class ServerManagementCog:
                     await ctx.send(embed=embed)
                     return
 
-    
+    '''
+    @commands.command()
+    @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin", "Admin")
+    async def removefirewall(self, ctx, ip):
+        try:
+            ipaddress.ip_address(ip)
+        except:
+            await ctx.send(f"Invalid IP Address entered: `{ip}`")
+            return
+        embed = discord.Embed(
+            title=f"ReactToConfirm \U0001f4b1", colour=discord.Colour(0xFFA500))
+        embed.set_footer(text="PGServerManager | TwiSt#2791")
+        embed.add_field(
+            name="Server:", value=f"Are you sure you would like to remove the firewall rule for `{ip}``")
+        message = await ctx.send(embed=embed)
+        await message.add_reaction("\U0001f44d")
+        await message.add_reaction("\U0001f44e")
+
+        def reactioncheck(reaction, user):
+            validreactions = ["\U0001f44d", "\U0001f44e"]
+            return user.id == ctx.author.id and reaction.emoji in validreactions
+        reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck)
+        # Check if thumbs up
+        if reaction.emoji != "\U0001f44d":
+            await ctx.send("Command cancelled")
+            return
+        #subprocess.call(f'netsh advfirewall firewall delete rule name="PG Idiot - {ip}"')
+        rulename = f'"PG Idiot - {ip}"'
+        p = subprocess.Popen(
+            ['cmd', '/c', f'start C:\\Cherno_Main\\ServerTools\\removerule.lnk {rulename}'])
+        await ctx.send("Firewall Rule Removed")
+
+        message = await ctx.send(f"React to this message to also add {ip} to the whitelist!")
+        await message.add_reaction("\U0001f44d")
+        await message.add_reaction("\U0001f44e")
+        reaction, user = await self.bot.wait_for('reaction_add', check=reactioncheck, timeout=30)
+        # Check if thumbs up
+        if reaction.emoji != "\U0001f44d":
+            await ctx.send("Command cancelled")
+            return
+        whitelistFile = open(
+            "C:\\Cherno_Main\\ServerTools\\Blacklist\\whitelist.txt", "a+")
+        whitelistFile.write(ip)
+        p = subprocess.Popen(
+            ['cmd', '/c', 'start /min C:\\Cherno_Main\\ServerTools\blackliststartasadmin.lnk'])
+        await ctx.send("IP added to whitelist")
+        '''
+
     @commands.command()
     @commands.has_any_role("Owner", "Developer", "Manager", "Head Admin", "Super Admin", "Admin")
     async def restartcherno(self, ctx):
@@ -368,7 +415,7 @@ class ServerManagementCog:
             await ctx.send("Command cancelled")
             return
         p = subprocess.Popen(
-            ['cmd','/c','start C:\\Users\\TwiSt\\Desktop\\Files\\PGServerManagerBot\\forceclosecherno.lnk'])
+            ['cmd', '/c', 'start C:\\Users\\TwiSt\\Desktop\\Files\\PGServerManagerBot\\forceclosecherno.lnk'])
 
 
 def setup(bot):

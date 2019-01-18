@@ -602,7 +602,8 @@ class DBCommandsCog:
                 embed = discord.Embed(
                     title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
                 embed.set_footer(text="PGServerManager | TwiSt#2791")
-                embed.add_field(name=f"Data:", value=f"You last maintained your Plot Pole **{days}** day(s) ago")
+                embed.add_field(
+                    name=f"Data:", value=f"You last maintained your Plot Pole **{days}** day(s) ago")
             else:
                 embed = discord.Embed(
                     title=f"**ERROR** \U0000274c", colour=discord.Colour(0xf44b42))
@@ -611,7 +612,7 @@ class DBCommandsCog:
                     name="Error:", value=f"Did not find a Plot Pole linked to your STEAM64ID")
             await ctx.author.send(embed=embed)
         else:
-            await ctx.send(f"The DiscordUser: {ctx.author.mention} is not registered. Please create a ticket with your SteamID in the subject!")
+            await ctx.send(f"The DiscordUser: {ctx.author.mention} is not registered. Please use the command `pg register`")
 
 
 def setup(bot):

@@ -570,7 +570,7 @@ class GamblingCog:
                 self.bot.get_command("deposit").reset_cooldown(ctx)
                 return
         else:
-            await ctx.send(f"The DiscordUser: {ctx.author.mention} is not registered. Please create a ticket with your SteamID in the subject!")
+            await ctx.send(f"The DiscordUser: {ctx.author.mention} is not registered. Please use the command `pg register`")
             dzconn.close()
             disconn.close()
             self.bot.get_command("deposit").reset_cooldown(ctx)
@@ -675,7 +675,7 @@ class GamblingCog:
                 await ctx.send(embed=embed)
         else:
             #User is not registered
-            await ctx.send(f"The DiscordUser: {ctx.author.mention} is not registered. Please create a ticket with your SteamID in the subject!")
+            await ctx.send(f"The DiscordUser: {ctx.author.mention} is not registered. Please use the command `pg register`")
             self.bot.get_command("withdraw").reset_cooldown(ctx)
         disconn.close()
         dzconn.close()
