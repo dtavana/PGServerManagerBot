@@ -152,12 +152,10 @@ class GamblingCog:
             result = result[0]['Perks']
             result = result[1:-1]
             result = result.split(',')
-            if ("'UnlimitedBank'" in result):
-                return -1
-            elif ("'BankLimit20M'" in result):
+            elif ("'BankLimit25M'" in result):
                 return 2
             elif ("'BankLimit10M'" in result):
-                return 2
+                return 1
             else:
                 return 0
 
@@ -613,7 +611,7 @@ class GamblingCog:
 
                 result = await GamblingCog.bankcheck(self, ctx, steamid)
                 if (result == 2):
-                    if (origCoins + amount > 20000000):
+                    if (origCoins + amount > 25000000):
                         await ctx.send(f"{ctx.author.mention} can not claim {amount} coins as it will put their bank over 20,000,000")
                         await ctx.send(f"{ctx.author.mention}'s current BankCoins is {origCoins}")
                         dzconn.close()
@@ -821,7 +819,7 @@ class GamblingCog:
             return
         disconn.close()'''
 
-    @commands.command(aliases=['wiretransferxp'])
+    @commands.command(aliases=['wiretransfercoins'])
     @commands.cooldown(1, 5, BucketType.user)
     async def transfercoins(self, ctx, user: discord.Member, amount: int):
         if ctx.author == user:
@@ -887,7 +885,7 @@ class GamblingCog:
                             title=f"Success \U00002705", colour=discord.Colour(0x32CD32))
                         embed.set_footer(text="PGServerManager | TwiSt#2791")
                         embed.add_field(
-                            name="Data:", value=f"{ctx.author.mention} gave {user.mention} **{amount} XP**!")
+                            name="Data:", value=f"{ctx.author.mention} gave {user.mention} **{amount} coins**!")
                         await ctx.send(embed=embed)
 
                     else:
@@ -899,7 +897,7 @@ class GamblingCog:
                             name="Error:", value=f"{ctx.author.mention}, an error has occured. Please screenshot this and make a ticket")
                         await ctx.send(embed=embed)
                         # Close the connections
-                        dzcur.close()
+                        await dzcur.close()
                         self.bot.get_command(
                             "transfercoins").reset_cooldown(ctx)
                         return
@@ -912,7 +910,7 @@ class GamblingCog:
                         name="Error:", value=f"{ctx.author.mention} does not have enough coins for this transfer!")
                     await ctx.send(embed=embed)
                     # Close the connections
-                    dzcur.close()
+                    await dzcur.close()
                     self.bot.get_command("transfercoins").reset_cooldown(ctx)
                     return
             else:
@@ -927,7 +925,7 @@ class GamblingCog:
                     embed.add_field(
                         name="Error:", value=f"The STEAM64ID bound to {user.mention} ({receiversteamid}) is currently in game")
                 await ctx.send(embed=embed)
-                dzconn.close()
+                await dzconn.close()
                 self.bot.get_command("transferxp").reset_cooldown(ctx)
                 return
         else:
@@ -945,10 +943,10 @@ class GamblingCog:
                     "Please use the following command `pg register`", inline=False)
             await ctx.send(embed=embed)
             # Close the connections
-            dzcur.close()
+            await dzcur.close()
             self.bot.get_command("transfercoins").reset_cooldown(ctx)
             return
-        dzcur.close()
+        await dzcur.close()
 
     @commands.command(aliases=['wiretransferxp'])
     @commands.cooldown(1, 5, BucketType.user)
@@ -1028,7 +1026,7 @@ class GamblingCog:
                             name="Error:", value=f"{ctx.author.mention}, an error has occured. Please screenshot this and make a ticket")
                         await ctx.send(embed=embed)
                         # Close the connections
-                        dzcur.close()
+                        await dzcur.close()
                         self.bot.get_command("transferxp").reset_cooldown(ctx)
                         return
                 else:
@@ -1040,7 +1038,7 @@ class GamblingCog:
                         name="Error:", value=f"{ctx.author.mention} does not have enough XP for this transfer!")
                     await ctx.send(embed=embed)
                     # Close the connections
-                    dzcur.close()
+                    await dzcur.close()
                     self.bot.get_command("transferxp").reset_cooldown(ctx)
                     return
             else:
@@ -1055,7 +1053,7 @@ class GamblingCog:
                     embed.add_field(
                         name="Error:", value=f"The STEAM64ID bound to {user.mention} ({receiversteamid}) is currently in game")
                 await ctx.send(embed=embed)
-                dzconn.close()
+                await dzconn.close()
                 self.bot.get_command("transferxp").reset_cooldown(ctx)
                 return
         else:
@@ -1073,10 +1071,10 @@ class GamblingCog:
                     "Please use the following command `pg register`", inline=False)
             await ctx.send(embed=embed)
             # Close the connections
-            dzcur.close()
+            await dzcur.close()
             self.bot.get_command("transferxp").reset_cooldown(ctx)
             return
-        dzcur.close()
+        await dzcur.close()
 
     @withdraw.error
     @transfercoins.error
