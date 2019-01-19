@@ -152,7 +152,7 @@ class GamblingCog:
             result = result[0]['Perks']
             result = result[1:-1]
             result = result.split(',')
-            elif ("'BankLimit25M'" in result):
+            if ("'BankLimit25M'" in result):
                 return 2
             elif ("'BankLimit10M'" in result):
                 return 1
