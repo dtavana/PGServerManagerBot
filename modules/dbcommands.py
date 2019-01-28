@@ -108,7 +108,7 @@ class DBCommandsCog:
 
     # --------------Commands--------------
     @commands.command()
-    @commands.has_any_role("Owner", "Manager", "Developer", "Head Admin", "Super Admin")
+    @commands.has_any_role("Owner", "Manager", "Developer", "Head Admin", "Super Admin", "Admin")
     async def coins(self, ctx, player: str, amount: int):
         '''
         Changes a player's BankCoins in the Database
@@ -253,7 +253,7 @@ class DBCommandsCog:
         dzconn.close()
 
     @commands.command()
-    @commands.has_any_role("Owner", "Manager", "Developer", "Head Admin", "Super Admin")
+    @commands.has_any_role("Owner", "Manager", "Developer", "Head Admin", "Super Admin", "Admin")
     async def xp(self, ctx, player: str, amount: int):
         '''
         Changes a player's BankCoins in the Database
